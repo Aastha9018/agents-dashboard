@@ -661,9 +661,9 @@ function flowHtml(s) {
   if (!all.length) return '<div class="placeholder">Nothing has happened in this session yet.</div>';
   const turns = all.slice(-(shownTurns.get(s.key) || 3));
   const hidden = tl.data.totalTurns - turns.length;
-  let html = hidden > 0 ? `<button class="earlier-btn" data-more="${esc(s.key)}">Show earlier turns (${hidden} more)</button>` : '';
-  html += '<ol class="flow">';
+  const blocks = []; // one per turn, newest first when joined
   for (const t of turns) {
+    let html = '';
     const base = `${s.key}#${t.n}`;
     const youId = base + ':you';
     const when = [`Turn ${t.n}`, dayClock(t.at || t.endAt), dur(t.at, t.endAt)].filter(Boolean).join(' · ');
@@ -692,13 +692,15 @@ function flowHtml(s) {
       html += item(rid, 'node g-reply', ICON.reply,
         `<div class="card"><div class="reply ${open ? 'full' : ''}" ${more ? `data-full="${esc(rid)}" title="${open ? '' : 'Click to read all'}"` : ''}>${esc(open ? t.reply : gist)}${more && !open ? ' <span class="chev">more</span>' : ''}</div></div>`);
     }
+    blocks.push(html);
   }
   const liveText = s.state === 'needs_you' ? `Waiting for you: ${s.needs ? s.needs.label.toLowerCase() : 'needs input'}`
     : s.state === 'working' ? `Working now${s.currentStep ? ': ' + s.currentStep : ''}`
     : s.state === 'your_turn' ? 'Your turn' : s.state === 'idle' ? 'Idle' : 'Session ended';
-  html += item(`${s.key}:live:${s.state}`, `node live s-${s.state}`, s.state === 'working' ? ICON.run : s.state === 'needs_you' ? '!' : ICON.other,
+  const live = item(`${s.key}:live:${s.state}`, `node live s-${s.state}`, s.state === 'working' ? ICON.run : s.state === 'needs_you' ? '!' : ICON.other,
     `<div class="card"><div class="t"><b>${esc(liveText)}</b><span class="tm">${esc(ago(s.lastActivity))}</span></div></div>`);
-  return html + '</ol>';
+  const earlier = hidden > 0 ? `<button class="earlier-btn" data-more="${esc(s.key)}">Show earlier turns (${hidden} more)</button>` : '';
+  return `<ol class="flow">${live}${blocks.reverse().join('')}</ol>${earlier}`;
 }
 
 function renderDetail() {
@@ -722,7 +724,7 @@ function renderDetail() {
     </div>
     ${nowHtml(s)}
     ${prHtml(s)}
-    <div class="flow-h"><h3>What happened</h3><span>Oldest at the top. Scroll down to see what came next.</span></div>
+    <div class="flow-h"><h3>What happened</h3><span>Newest at the top. Scroll down for what came before.</span></div>
     ${flowHtml(s)}
     ${s.resume ? `<div class="foot"><button data-copy="${esc(s.resume)}">Copy resume command</button></div>` : ''}
   </div>`;
