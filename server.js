@@ -19,6 +19,7 @@ const { focusSession, notify, focusedKeys, appSessions, appSessionByLocal } = re
 const timeline = require('./lib/timeline');
 const alerts = require('./lib/alerts');
 const github = require('./lib/github');
+const demo = require('./lib/demo');
 
 const PORT = Number(process.env.PORT || 4777);
 
@@ -211,7 +212,7 @@ const server = http.createServer((req, res) => {
     if (url.searchParams.get('fresh') === '1') tick();
     return send(res, 200, {
       ...snapshot,
-      sessions: snapshot.sessions.map(({ file, ...rest }) => rest), // don't ship local paths the page doesn't need
+      sessions: (url.searchParams.get('demo') === '1' ? demo.sessions(Date.now()) : []).concat(snapshot.sessions.map(({ file, ...rest }) => rest)), // don't ship local paths the page doesn't need
       notify: NOTIFY,
       viewOnly: remote,
       settings,
@@ -227,7 +228,9 @@ const server = http.createServer((req, res) => {
     return send(res, 200, fs.readFileSync(path.join(__dirname, 'public', 'sw.js'), 'utf8'), 'text/javascript');
   }
   if (req.method === 'GET' && url.pathname === '/api/timeline') {
-    const s = snapshot.sessions.find((x) => x.key === url.searchParams.get('key'));
+    const tkey = url.searchParams.get('key') || '';
+    if (tkey.startsWith('demo:')) return send(res, 200, demo.timeline(tkey, Date.now()));
+    const s = snapshot.sessions.find((x) => x.key === tkey);
     if (!s) return send(res, 404, { error: 'session not found' });
     try {
       return send(res, 200, timeline.build(s));
@@ -271,6 +274,7 @@ const server = http.createServer((req, res) => {
       } catch {
         return send(res, 400, { error: 'bad json' });
       }
+      if (String(key).startsWith('demo:')) return send(res, 200, { message: 'Demo session: on a real one, this jumps straight to it.' });
       const s = snapshot.sessions.find((x) => x.key === key);
       if (!s) return send(res, 404, { error: 'session not found' });
       return send(res, 200, { message: focusSession(s) });

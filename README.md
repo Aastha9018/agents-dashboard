@@ -2,6 +2,8 @@
 
 One local page showing every AI agent session on this Mac and which ones are waiting on you.
 
+![Agents dashboard demo: agents and sub agents, what needs you glowing, live CI, switching agents, dark mode, jumping to a session](docs/demo.gif)
+
 **Needs:** macOS, Node 22.5 or newer, and (for the PR/CI section) the `gh` CLI signed in. No npm dependencies.
 
 ## Install as a Claude Code plugin (recommended)
@@ -67,6 +69,8 @@ An agent moves to **Needs you** when any of its sub agents is waiting. Backgroun
 **Screenshots:** when a session checks UI work (browser or simulator screenshots), its turn shows a "Screenshots" row with thumbnails of the latest 8. Images you pasted into a message show under your prompt. Click one to see it full size (Esc to close). Claude Code sessions only.
 
 The speaker button in the top right switches alerts between **sound** (default) and **silent**. It applies to browser alerts and to the macOS banner fallback, and is saved in `~/.agents-dashboard/settings.json` (start with `SOUND=0` to default to silent).
+
+**Demo mode:** open http://localhost:4777/?demo=1 to mix a few sample sessions (Codex, Prime Agent, sub agents, a running PR) in with your real ones. Handy for screen recordings. Sample sessions are labelled and opening one does nothing.
 
 The sun/moon button in the top right switches between light (default) and dark. Your choice is remembered.
 

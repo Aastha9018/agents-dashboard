@@ -250,11 +250,16 @@ main { min-width: 0; }
 .tree .top::after { content: ""; display: block; width: 2px; height: 18px; margin: 0 auto; background: var(--rail); }
 .tree .top.hot::after { background: var(--hot); }
 .branches { display: flex; gap: 0; justify-content: center; min-width: min-content; }
-.branch { position: relative; flex: 0 0 236px; padding: 18px 8px 0; }
+.branch { position: relative; flex: 1 1 0; min-width: 150px; max-width: 250px; padding: 18px 6px 0; contain: inline-size; } /* long titles truncate instead of widening the branch */
 .branch::before { content: ""; position: absolute; top: 0; left: 0; right: 0; border-top: 2px solid var(--rail); }
 .branch:first-child::before { left: 50%; } .branch:last-child::before { right: 50%; }
 .branch:only-child::before { display: none; }
 .branch::after { content: ""; position: absolute; top: 0; left: calc(50% - 1px); width: 2px; height: 18px; background: var(--rail); }
+.branch.hot { flex-grow: 2; } /* what needs you gets room to read */
+.kids, .kid, .mnode { min-width: 0; }
+.kid { overflow: visible; }
+.mnode .nb { flex-wrap: wrap; }
+.mnode .nb button { white-space: nowrap; }
 .branch.hot::after { background: var(--hot); animation: hotline 1.2s ease-in-out infinite; }
 .branches.hotL .branch.hot::before, .branch.hot-rail::before { border-top-color: var(--hot); }
 @keyframes hotline { 50% { opacity: .35; } }
@@ -326,6 +331,7 @@ main { min-width: 0; }
 
 <script>
 // ---------- state ----------
+const DEMO = new URLSearchParams(location.search).get('demo') === '1'; // sample sessions mixed in, for demos
 let data = { sessions: [] };
 let filter = pref('filter', 'all');
 let selected = pref('selected', '');
@@ -450,6 +456,7 @@ function renderList() {
 
 // ---------- map: you in the middle, agents on ring 1, their sub agents on ring 2 ----------
 let mapSig = '';
+let mapHidden = 0;
 function mapNodes() {
   const all = visible();
   const keys = new Set(all.map(s => s.key));
@@ -458,7 +465,8 @@ function mapNodes() {
   const agents = all.filter(s => (!s.parentKey || !keys.has(s.parentKey)) && (live(s) || subsOf(s).some(live)));
   const rank = (s) => (s.state === 'needs_you' || subNeeds(s).length) ? 0 : s.state === 'working' ? 1 : s.state === 'your_turn' ? 2 : 3;
   agents.sort((a, b) => rank(a) - rank(b) || b.lastActivity - a.lastActivity);
-  return agents.slice(0, 14).map(a => ({ a, subs: subsOf(a).filter(x => live(x) || x.state === 'needs_you') }));
+  mapHidden = Math.max(0, agents.length - 7); // quiet ones are last, so they're the ones left out
+  return agents.slice(0, 7).map(a => ({ a, subs: subsOf(a).filter(x => live(x) || x.state === 'needs_you') }));
 }
 function nodeCls(x, hasAsk) {
   if (x.state === 'needs_you') return 'm-needs';
@@ -488,7 +496,7 @@ function renderMap() {
   if (sig === mapSig) return;
   mapSig = sig;
   const asking = groups.reduce((n, g) => n + (g.a.state === 'needs_you' ? 1 : 0) + g.subs.filter(x => x.state === 'needs_you').length, 0);
-  const head = `<div class="map-h"><h3>Agents and sub agents</h3><span>${asking ? 'Follow the red lines to the glowing cards: they need you.' : 'Nothing needs you right now.'} Click a card to see it below.</span><button class="linkish" data-map>${open ? 'Hide map' : 'Show map'}</button></div>`;
+  const head = `<div class="map-h"><h3>Agents and sub agents</h3><span>${asking ? 'Follow the red lines to the glowing cards: they need you.' : 'Nothing needs you right now.'} Click a card to see it below.${mapHidden ? ` ${mapHidden} quiet agent${mapHidden > 1 ? 's' : ''} hidden (in the list below).` : ''}</span><button class="linkish" data-map>${open ? 'Hide map' : 'Show map'}</button></div>`;
   if (!open) { el.innerHTML = `<div class="mapwrap">${head}<div style="height:14px"></div></div>`; return; }
   const working = groups.filter(g => g.a.state === 'working').length + groups.reduce((k, g) => k + g.subs.filter(x => x.state === 'working').length, 0);
   const hub = `<div class="top ${asking ? 'hot' : ''}"><div class="hub ${asking ? 'hot' : ''}"><span class="hl">You</span><span class="hn">${asking || '✓'}</span><span class="hs">${asking ? 'asking you' : working ? `${working} working` : 'all clear'}</span></div></div>`;
@@ -765,8 +773,10 @@ async function loadTimeline(key, force) {
 const activitySeen = new Map();
 async function refresh(fresh) {
   try {
-    const r = await fetch('/api/sessions' + (fresh ? '?fresh=1' : ''));
+    const qs = [fresh ? 'fresh=1' : '', DEMO ? 'demo=1' : ''].filter(Boolean).join('&');
+    const r = await fetch('/api/sessions' + (qs ? '?' + qs : ''));
     data = await r.json();
+    if (DEMO && !document.getElementById('demoNote')) document.getElementById('summary').insertAdjacentHTML('afterend', '<span class="vo-note" id="demoNote">Demo: sample sessions mixed in</span>');
     if (data.viewOnly && !document.body.classList.contains('view-only')) {
       document.body.classList.add('view-only');
       document.getElementById('summary').insertAdjacentHTML('afterend', '<span class="vo-note">View only</span>');

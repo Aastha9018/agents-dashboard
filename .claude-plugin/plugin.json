@@ -1,6 +1,6 @@
 {
   "name": "agents-dashboard",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "A local dashboard of every Claude Code, Codex and Prime Agent session on your Mac: what each is doing, its sub agents, its PR and CI, and glowing alerts for whatever needs you.",
   "author": {
     "name": "Aastha9018",
