@@ -2,7 +2,17 @@
   "name": "agents-dashboard",
   "version": "0.2.1",
   "description": "A local dashboard of every Claude Code, Codex and Prime Agent session on your Mac: what each is doing, its sub agents, its PR and CI, and glowing alerts for whatever needs you.",
-  "author": { "name": "Aastha9018", "url": "https://github.com/Aastha9018" },
+  "author": {
+    "name": "Aastha9018",
+    "url": "https://github.com/Aastha9018"
+  },
   "repository": "https://github.com/Aastha9018/agents-dashboard",
-  "keywords": ["dashboard", "sessions", "agents", "notifications", "macos"]
+  "keywords": [
+    "dashboard",
+    "sessions",
+    "agents",
+    "notifications",
+    "macos"
+  ],
+  "license": "MIT"
 }

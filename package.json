@@ -1,7 +1,6 @@
 {
   "name": "agents-dashboard",
   "version": "0.2.0",
-  "private": true,
   "description": "Local dashboard of every Claude Code, Codex and Prime Agent session on this Mac, and which ones need you.",
   "main": "server.js",
   "scripts": {
@@ -11,5 +10,6 @@
   },
   "engines": {
     "node": ">=22.5"
-  }
+  },
+  "license": "MIT"
 }

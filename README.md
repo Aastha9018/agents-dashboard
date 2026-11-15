@@ -125,3 +125,7 @@ ngrok http 4777
 ```
 
 Send `https://<your-tunnel>/?key=<key>`; the key is in `~/.agents-dashboard/share-key` and printed when the server starts. Visitors through a tunnel must have the key, and they are view-only: they can't open sessions on your Mac and never receive (or silence) your alerts. They do see your prompts and replies, so only share it with people you trust.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
