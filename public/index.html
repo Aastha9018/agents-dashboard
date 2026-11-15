@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agents</title>
+<script>try { const t = localStorage.getItem('ad.theme'); if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t; } catch {}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f3ee; --surface: #ffffff; --surface-2: #faf8f4; --border: #e8e3da; --line: #ddd6ca;
+  --text: #23262d; --muted: #686d76; --faint: #9b9fa7;
+  --needs: #e2552c; --needs-bg: #fdefe9;
+  --work: #0e9384; --work-bg: #e3f5f1;
+  --turn: #5753d0; --turn-bg: #efeefc;
+  --idle: #a5a9b0; --idle-bg: #f0eee9;
+  --g-explore: #3a7fc1; --g-edit: #5753d0; --g-run: #64748b; --g-plan: #c08415; --g-ask: #e2552c;
+  --g-ship: #2f9a5a; --g-error: #d23b3b; --g-browser: #0e9384; --g-reply: #5753d0; --g-other: #8a8f98;
+  --shadow: 0 1px 2px rgba(35, 38, 45, .04), 0 4px 16px rgba(35, 38, 45, .05);
+  --font: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121317; --surface: #1a1c21; --surface-2: #1f2228; --border: #2a2d34; --line: #33373f;
+    --text: #ebe8e2; --muted: #a2a5ad; --faint: #6f737b;
+    --needs: #ff8a63; --needs-bg: #2c1a14;
+    --work: #3ccfb9; --work-bg: #11261f;
+    --turn: #a29ef5; --turn-bg: #1d1c33;
+    --idle: #7b8088; --idle-bg: #1f2126;
+    --g-explore: #79b3ea; --g-edit: #a29ef5; --g-run: #9aa6b8; --g-plan: #e8b04c; --g-ask: #ff8a63;
+    --g-ship: #5fd08c; --g-error: #ff7676; --g-browser: #3ccfb9; --g-reply: #a29ef5; --g-other: #9a9fa8;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121317; --surface: #1a1c21; --surface-2: #1f2228; --border: #2a2d34; --line: #33373f;
+  --text: #ebe8e2; --muted: #a2a5ad; --faint: #6f737b;
+  --needs: #ff8a63; --needs-bg: #2c1a14;
+  --work: #3ccfb9; --work-bg: #11261f;
+  --turn: #a29ef5; --turn-bg: #1d1c33;
+  --idle: #7b8088; --idle-bg: #1f2126;
+  --g-explore: #79b3ea; --g-edit: #a29ef5; --g-run: #9aa6b8; --g-plan: #e8b04c; --g-ask: #ff8a63;
+  --g-ship: #5fd08c; --g-error: #ff7676; --g-browser: #3ccfb9; --g-reply: #a29ef5; --g-other: #9a9fa8;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 6px 20px rgba(0, 0, 0, .25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 var(--font); -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+code { font-family: var(--mono); font-size: .86em; }
+button { font: inherit; font-size: 13.5px; font-weight: 600; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); padding: 7px 14px; cursor: pointer; transition: border-color .15s, background .15s; }
+button:hover { border-color: var(--faint); }
+button:focus-visible, select:focus-visible { outline: 2px solid var(--turn); outline-offset: 2px; }
+button.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+button.linkish { border: 0; background: none; padding: 0; margin-top: 6px; color: var(--turn); font-size: 13px; font-weight: 600; }
+button[disabled] { opacity: .6; cursor: default; }
+
+.wrap { max-width: 1240px; margin: 0 auto; padding: 28px 24px 80px; }
+header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+header h1 { font-size: 26px; font-weight: 700; letter-spacing: -.02em; margin: 0; }
+.summary { color: var(--muted); font-size: 15px; }
+.summary b { color: var(--text); font-weight: 600; }
+.summary .n { color: var(--needs); }
+.spacer { flex: 1; }
+select { font: inherit; font-size: 13.5px; font-weight: 600; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); padding: 7px 10px; }
+
+.layout { display: grid; grid-template-columns: 420px minmax(0, 1fr); gap: 24px; align-items: start; }
+aside { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow: auto; padding: 2px 4px 2px 2px; }
+.group { margin-bottom: 18px; }
+.group h2 { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin: 0 0 8px 4px; display: flex; gap: 6px; }
+.group h2 .c { color: var(--muted); }
+.row { display: grid; grid-template-columns: 10px minmax(0, 1fr); column-gap: 12px; width: 100%; text-align: left; padding: 12px 14px; margin-bottom: 6px; border-radius: 14px; border: 1px solid transparent; background: transparent; font-weight: 400; cursor: pointer; }
+.row:hover { background: var(--surface); border-color: var(--border); }
+.row.sel { background: var(--surface); border-color: var(--border); box-shadow: var(--shadow); }
+.row .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; background: var(--c); }
+.row .rt { font-weight: 600; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .rs { grid-column: 2; font-size: 13px; color: var(--c-text, var(--muted)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .rm { grid-column: 2; font-size: 12px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.s-needs_you { --c: var(--needs); --c-bg: var(--needs-bg); --c-text: var(--needs); }
+.s-working { --c: var(--work); --c-bg: var(--work-bg); }
+.s-your_turn { --c: var(--turn); --c-bg: var(--turn-bg); }
+.s-idle, .s-ended { --c: var(--idle); --c-bg: var(--idle-bg); }
+.row.s-working .dot, .live.s-working .ic { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+.subs { list-style: none; margin: -2px 0 10px 19px; padding: 2px 0 0 14px; border-left: 2px solid var(--line); display: grid; gap: 6px; }
+.sub { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; column-gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); cursor: pointer; }
+.sub:hover { border-color: var(--faint); }
+.sub.sel { box-shadow: var(--shadow); border-color: var(--faint); }
+.sub .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); align-self: start; margin-top: 7px; }
+.sub.s-working .dot { animation: pulse 1.6s ease-in-out infinite; }
+.sub .st { font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sub .ss { font-size: 12px; color: var(--c-text, var(--muted)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sub .kind { font-size: 11px; font-weight: 600; color: var(--faint); text-transform: uppercase; letter-spacing: .04em; margin-right: 6px; }
+.sub .sb { display: flex; gap: 6px; grid-row: 1 / span 2; grid-column: 3; }
+.sub .sb button { font-size: 12px; padding: 4px 10px; border-radius: 8px; white-space: nowrap; }
+.sub .sb .appr { background: var(--needs); border-color: var(--needs); color: #fff; }
+.sub .sb .appr[disabled] { background: transparent; border-color: var(--border); color: var(--faint); opacity: 1; }
+.s-done, .s-stopped { --c: var(--idle); --c-bg: var(--idle-bg); }
+.s-done .dot { background: var(--g-ship); }
+.subs .more-subs { padding-left: 4px; }
+.subs .more-subs .linkish { margin-top: 0; font-size: 12.5px; }
+.row .subcount { font-size: 12px; color: var(--muted); }
+.row .subcount b { color: var(--needs); font-weight: 600; }
+.empty-note { color: var(--faint); font-size: 13.5px; padding: 0 4px; }
+details.earlier > summary { cursor: pointer; list-style: none; }
+details.earlier > summary::-webkit-details-marker { display: none; }
+details.earlier > summary h2::after { content: "Show"; margin-left: auto; color: var(--turn); text-transform: none; letter-spacing: 0; font-weight: 600; }
+details.earlier[open] > summary h2::after { content: "Hide"; }
+
+main { min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow); padding: 28px 32px 36px; }
+.dh-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.chip { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+.dh h2 { font-size: 24px; line-height: 1.3; letter-spacing: -.015em; font-weight: 700; margin: 10px 0 6px; overflow-wrap: anywhere; }
+
+.now { margin-top: 22px; border-radius: 16px; padding: 18px 20px; background: var(--c-bg); border: 1px solid color-mix(in srgb, var(--c) 25%, transparent); }
+.now .lbl { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--c); }
+.now .big { font-size: 18px; font-weight: 600; margin-top: 4px; overflow-wrap: anywhere; }
+.now .more { margin-top: 8px; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14.5px; }
+.clamp4 { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.now .cta { margin-top: 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.now .cta button.primary { background: var(--c); border-color: var(--c); color: #fff; }
+.bar { height: 6px; border-radius: 99px; background: color-mix(in srgb, var(--c) 15%, transparent); margin-top: 14px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--c); border-radius: 99px; }
+.barlbl { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+
+.pr { margin-top: 16px; border: 1px solid var(--border); border-radius: 16px; padding: 14px 18px; display: grid; gap: 6px; font-size: 14px; }
+.pr-top { display: flex; gap: 8px; align-items: baseline; min-width: 0; }
+.pr-top a { font-weight: 700; white-space: nowrap; text-decoration: none; }
+.pr-top a:hover { text-decoration: underline; }
+.pr-top .pt { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.pr .ci { font-weight: 600; }
+.pr .ci.running { color: var(--work); } .pr .ci.failed { color: var(--g-error); } .pr .ci.passed { color: var(--g-ship); }
+.pr ul { margin: 0; padding-left: 18px; color: var(--muted); }
+.pr li b { color: var(--text); font-weight: 600; }
+.pr li.fail b { color: var(--g-error); }
+.pr .notes { color: var(--muted); font-size: 13px; }
+.ci .d { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: currentColor; margin-right: 7px; vertical-align: 1px; }
+.ci.running .d { animation: pulse 1.2s ease-in-out infinite; }
+
+.flow-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 34px 0 6px; }
+.flow-h h3 { font-size: 17px; margin: 0; font-weight: 700; }
+.flow-h span { color: var(--faint); font-size: 13px; }
+.flow { list-style: none; margin: 0; padding: 8px 0 0; position: relative; }
+.flow::before { content: ""; position: absolute; left: 17px; top: 18px; bottom: 18px; width: 2px; background: var(--line); border-radius: 2px; }
+.flow > li { position: relative; padding-left: 52px; margin: 0 0 12px; }
+.flow > li.reveal { opacity: 0; transform: translateY(14px); transition: opacity .5s ease, transform .5s ease; }
+.flow > li.reveal.in { opacity: 1; transform: none; }
+.ic { position: absolute; left: 4px; top: 6px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 2px solid var(--g, var(--g-other)); color: var(--g, var(--g-other)); font-size: 14px; font-weight: 700; line-height: 1; }
+.ic svg { width: 14px; height: 14px; }
+.chapter { padding-top: 16px; }
+.chapter .ic { background: var(--text); border-color: var(--text); color: var(--bg); top: 20px; }
+.chapter .when { font-size: 12px; font-weight: 600; color: var(--faint); letter-spacing: .02em; }
+.chapter .you { font-size: 15.5px; font-weight: 600; margin-top: 2px; overflow-wrap: anywhere; white-space: pre-wrap; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.chapter .you.full { display: block; }
+.node .card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 10px 14px; }
+.node .t { display: flex; gap: 10px; align-items: baseline; }
+.node .t b { font-weight: 600; font-size: 14.5px; overflow-wrap: anywhere; }
+.node .t .tm { margin-left: auto; font-size: 12px; color: var(--faint); white-space: nowrap; }
+.node p { margin: 2px 0 0; color: var(--muted); font-size: 13.5px; overflow-wrap: anywhere; }
+.node ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 13.5px; }
+.node ul code { color: var(--text); overflow-wrap: anywhere; }
+.node .reply { white-space: pre-wrap; color: var(--text); font-size: 14px; margin-top: 4px; overflow-wrap: anywhere; }
+.g-explore { --g: var(--g-explore); } .g-edit { --g: var(--g-edit); } .g-run, .g-ci { --g: var(--g-run); }
+.g-plan { --g: var(--g-plan); } .g-ask { --g: var(--g-ask); } .g-error { --g: var(--g-error); }
+.g-pr, .g-merge, .g-push, .g-commit, .g-deploy { --g: var(--g-ship); } .g-browser { --g: var(--g-browser); }
+.g-reply { --g: var(--g-reply); } .g-other { --g: var(--g-other); }
+.g-reply .card { background: var(--turn-bg); border-color: color-mix(in srgb, var(--turn) 20%, transparent); }
+.live .card { background: var(--c-bg); border-color: color-mix(in srgb, var(--c) 30%, transparent); }
+.live .ic { border-color: var(--c); color: var(--c); }
+.live .t b { color: var(--c); }
+/* compact history: one line per step, details on click */
+.chapter .you { font-size: 14.5px; -webkit-line-clamp: 1; cursor: pointer; }
+.chapter .you.full { display: block; white-space: pre-wrap; }
+.flow > li.step { margin-bottom: 4px; }
+.flow > li.step .ic { width: 22px; height: 22px; left: 7px; top: 3px; border-width: 1.5px; }
+.flow > li.step .ic svg { width: 11px; height: 11px; }
+.step .line { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: 14px; padding: 3px 0; }
+.step.more .line { cursor: pointer; }
+.step .line b { font-weight: 600; white-space: nowrap; }
+.step .line .dt { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.step .chev { margin-left: auto; color: var(--faint); font-size: 13px; padding-left: 8px; }
+.step p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.step ul { margin: 4px 0 6px; padding-left: 18px; color: var(--muted); font-size: 13px; }
+.g-reply .reply { cursor: default; font-size: 14px; margin: 0; }
+.g-reply .reply[data-full] { cursor: pointer; }
+.g-reply .reply .chev { color: var(--turn); font-weight: 600; font-size: 13px; }
+.g-reply .card { padding: 8px 14px; }
+.earlier-btn { margin: 0 0 6px 52px; }
+.placeholder { color: var(--faint); padding: 40px 0; text-align: center; }
+.foot { margin-top: 22px; }
+
+/* ---------- map: you in the middle, agents on the rings, glowing cards need you ---------- */
+.mapwrap { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow); margin-bottom: 24px; overflow: hidden; }
+.map-h { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; padding: 16px 22px 0; }
+.map-h h3 { margin: 0; font-size: 15px; font-weight: 700; }
+.map-h span { color: var(--faint); font-size: 13px; }
+.map-h .linkish { margin: 0 0 0 auto; }
+.mnode { position: relative; width: 100%; border-radius: 10px; font-size: 12.5px; line-height: 1.35; cursor: pointer; text-align: left; transition: transform .15s; z-index: 2; }
+.mnode:hover { transform: translateY(-1px); z-index: 5; }
+.mnode .nt { display: flex; gap: 6px; align-items: center; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mnode .nt i { flex: none; width: 7px; height: 7px; border-radius: 2px; background: var(--c, var(--idle)); }
+.mnode .nt .nm { overflow: hidden; text-overflow: ellipsis; }
+.mnode .badge { flex: none; margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--needs); color: #fff; font-size: 11px; display: grid; place-items: center; }
+.mnode .nq { margin-top: 3px; font-size: 12px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.mnode .nmeta { margin-top: 2px; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mnode .nb { display: flex; gap: 6px; margin-top: 7px; }
+.mnode .nb button { font-size: 11.5px; padding: 3px 9px; border-radius: 7px; }
+.mnode .nb .primary { background: #fff; color: var(--needs); border-color: #fff; }
+.m-needs { --c: #fff; background: var(--needs); color: #fff; padding: 9px 11px; border: 1px solid var(--needs); animation: glow 1.8s ease-in-out infinite; z-index: 4; }
+.m-needs .nmeta { color: rgba(255, 255, 255, .8); }
+@keyframes glow { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--needs) 55%, transparent), 0 0 14px 2px color-mix(in srgb, var(--needs) 35%, transparent); } 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--needs) 0%, transparent), 0 0 26px 8px color-mix(in srgb, var(--needs) 45%, transparent); } }
+.m-path { --c: var(--needs); background: var(--surface); border: 1.5px solid var(--needs); padding: 6px 9px; }
+.m-working { --c: var(--work); background: var(--surface); border: 1px solid color-mix(in srgb, var(--work) 45%, transparent); padding: 6px 9px; }
+.m-working .nt i { border-radius: 50%; animation: pulse 1.6s ease-in-out infinite; }
+.m-turn { --c: var(--turn); background: var(--surface); border: 1px solid color-mix(in srgb, var(--turn) 40%, transparent); padding: 6px 9px; }
+.m-quiet { --c: var(--idle); background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); padding: 6px 9px; font-size: 12px; }
+.m-quiet .nt { font-weight: 600; }
+.mnode.msel { outline: 2px solid var(--text); outline-offset: 3px; }
+.hub { display: inline-grid; grid-auto-flow: column; align-items: baseline; gap: 8px; padding: 8px 18px; border-radius: 99px; background: var(--surface); border: 2px solid var(--line); position: relative; z-index: 2; }
+.hub.hot { border-color: var(--needs); animation: glow 2.2s ease-in-out infinite; }
+.hub .hl { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.hub .hn { font-size: 22px; font-weight: 700; line-height: 1.1; color: var(--needs); }
+.hub:not(.hot) .hn { color: var(--work); }
+.hub .hs { font-size: 11px; color: var(--muted); }
+.map-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 10px 22px 16px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); }
+.map-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.map-legend i { width: 14px; height: 10px; border-radius: 3px; display: inline-block; }
+.map-empty { color: var(--faint); font-size: 13px; text-align: center; padding: 8px 0 20px; }
+/* tree: You → agents (one branch each) → sub agents stacked under their agent */
+.tree { padding: 18px 22px 22px; overflow-x: auto; --rail: var(--line); --hot: var(--needs); }
+.tree .top { text-align: center; }
+.tree .top::after { content: ""; display: block; width: 2px; height: 18px; margin: 0 auto; background: var(--rail); }
+.tree .top.hot::after { background: var(--hot); }
+.branches { display: flex; gap: 0; justify-content: center; min-width: min-content; }
+.branch { position: relative; flex: 0 0 236px; padding: 18px 8px 0; }
+.branch::before { content: ""; position: absolute; top: 0; left: 0; right: 0; border-top: 2px solid var(--rail); }
+.branch:first-child::before { left: 50%; } .branch:last-child::before { right: 50%; }
+.branch:only-child::before { display: none; }
+.branch::after { content: ""; position: absolute; top: 0; left: calc(50% - 1px); width: 2px; height: 18px; background: var(--rail); }
+.branch.hot::after { background: var(--hot); animation: hotline 1.2s ease-in-out infinite; }
+.branches.hotL .branch.hot::before, .branch.hot-rail::before { border-top-color: var(--hot); }
+@keyframes hotline { 50% { opacity: .35; } }
+.kids { list-style: none; margin: 0 0 0 16px; padding: 10px 0 0 0; display: grid; gap: 10px; position: relative; }
+.kid { position: relative; padding-left: 18px; }
+.kid::before { content: ""; position: absolute; left: 0; top: -10px; bottom: 50%; border-left: 2px solid var(--rail); border-bottom: 2px solid var(--rail); width: 14px; border-bottom-left-radius: 8px; }
+.kid:not(:last-child)::after { content: ""; position: absolute; left: 0; top: 50%; bottom: -10px; border-left: 2px solid var(--rail); }
+.kid.hot::before { border-color: var(--hot); }
+.kid.hot-pass::after { border-color: var(--hot); }
+.kid.hot-pass::before { border-left-color: var(--hot); }
+.more-kids { font-size: 12px; color: var(--faint); padding-left: 18px; }
+@media (max-width: 860px) { .branches { justify-content: flex-start; } }
+@media (prefers-reduced-motion: reduce) { .m-needs, .hub.hot, .branch.hot::after { animation: none; } }
+.needs-strip { margin-bottom: 18px; display: grid; gap: 10px; }
+.needs-strip h3 { margin: 0 0 2px 4px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--needs); }
+.nd { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; align-items: center; background: var(--needs-bg); border: 1px solid color-mix(in srgb, var(--needs) 28%, transparent); border-left: 4px solid var(--needs); border-radius: 14px; padding: 12px 16px; }
+.nd.sel { box-shadow: var(--shadow); }
+.nd .who { font-size: 12px; color: var(--muted); }
+.nd .what { font-weight: 600; font-size: 15px; overflow-wrap: anywhere; }
+.nd .why { font-size: 13.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nd .btns { display: flex; gap: 8px; grid-row: 1 / span 3; grid-column: 2; }
+.nd .btns .primary { background: var(--needs); border-color: var(--needs); color: #fff; }
+@media (max-width: 860px) { .nd { grid-template-columns: 1fr; } .nd .btns { grid-row: auto; grid-column: 1; } }
+.theme-btn { width: 38px; height: 36px; padding: 0; display: grid; place-items: center; border-radius: 10px; }
+.theme-btn svg { width: 18px; height: 18px; }
+.view-only [data-open], .view-only #alertsBtn, .view-only .appr, .view-only .nb, .view-only [data-copy] { display: none !important; }
+.vo-note { font-size: 12.5px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 99px; padding: 4px 12px; }
+.toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 12px; font-size: 14px; opacity: 0; transition: .25s; pointer-events: none; max-width: calc(100vw - 32px); }
+.toast.show { opacity: 1; transform: translateX(-50%); }
+.errors { background: var(--needs-bg); color: var(--needs); border-radius: 12px; padding: 10px 14px; font-size: 13.5px; margin-bottom: 16px; }
+
+@media (max-width: 860px) {
+  .wrap { padding: 20px 16px 60px; }
+  .layout { grid-template-columns: 1fr; }
+  aside { position: static; max-height: none; padding: 0; }
+  .panel { padding: 20px 16px 28px; border-radius: 18px; }
+  .dh h2 { font-size: 20px; }
+  header h1 { font-size: 22px; }
+  .flow > li { padding-left: 46px; }
+  .earlier-btn { margin-left: 46px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flow > li.reveal { opacity: 1; transform: none; transition: none; }
+  .row.s-working .dot, .live.s-working .ic, .ci.running .d { animation: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Agents</h1>
+    <span class="summary" id="summary">Loading…</span>
+    <span class="spacer"></span>
+    <button id="alertsBtn" hidden></button>
+    <button id="themeBtn" class="theme-btn"></button>
+    <select id="agentFilter" aria-label="Show agent">
+      <option value="all">All agents</option><option value="claude">Claude Code</option><option value="codex">Codex</option><option value="prime">Prime Agent</option>
+    </select>
+  </header>
+  <div id="errors"></div>
+  <section id="map"></section>
+  <div class="layout">
+    <aside id="list" aria-label="Sessions"></aside>
+    <main><div id="needs"></div><div id="detail"></div></main>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+// ---------- state ----------
+let data = { sessions: [] };
+let filter = pref('filter', 'all');
+let selected = pref('selected', '');
+const timelines = new Map();   // key -> { data, at, sig, loading, error }
+const shownTurns = new Map();  // key -> how many recent turns to show
+const revealed = new Set();    // flow item ids already animated in (so refreshes don't replay)
+const fullText = new Set();    // ids of expanded replies/prompts
+const openSubs = new Set();    // parents whose finished sub agents are all shown
+let listSig = '', detailSig = '';
+
+function pref(k, d) { try { return localStorage.getItem('ad.' + k) ?? d; } catch { return d; } }
+function savePref(k, v) { try { localStorage.setItem('ad.' + k, v); } catch {} }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function ago(t) {
+  if (!t) return '';
+  const s = Math.max(0, (Date.now() - t) / 1000);
+  if (s < 45) return 'just now';
+  if (s < 3600) return Math.round(s / 60) + 'm ago';
+  if (s < 86400) return Math.round(s / 3600) + 'h ago';
+  return Math.round(s / 86400) + 'd ago';
+}
+function clock(t) { return t ? new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : ''; }
+function dayClock(t) {
+  if (!t) return '';
+  const d = new Date(t), today = new Date();
+  return d.toDateString() === today.toDateString() ? clock(t) : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + clock(t);
+}
+function dur(a, b) {
+  if (!a || !b || b <= a) return '';
+  const m = Math.round((b - a) / 60000);
+  return m < 1 ? 'under a minute' : m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${m % 60}m`;
+}
+function plural(n, one, many) { return `${n} ${n === 1 ? one : many}`; }
+function visible() { return data.sessions.filter(s => filter === 'all' || s.agent === filter); }
+function repo(s) { return (s.project || '').split(' · ')[0]; }
+
+// ---------- words ----------
+function shortStatus(s) {
+  switch (s.state) {
+    case 'needs_you': return s.needs ? s.needs.label : 'Needs you';
+    case 'working': return s.currentStep ? `Working: ${s.currentStep}` : 'Working';
+    case 'your_turn': return `Finished ${ago(s.lastAgentAt || s.lastActivity)}`;
+    case 'idle': return `Idle since ${ago(s.lastActivity)}`;
+    default: return `Ended ${ago(s.lastActivity)}`;
+  }
+}
+const NOW_LABEL = { needs_you: 'Needs you', working: 'Working now', your_turn: 'Your turn', idle: 'Idle', ended: 'Not running' };
+
+// ---------- list ----------
+const GROUPS = [['needs_you', 'Needs you'], ['working', 'Working'], ['your_turn', 'Finished, your turn'], ['idle', 'Idle']];
+const SUB_STATUS = { working: 'Working', done: 'Finished', stopped: 'Stopped', needs_you: 'Needs approval', your_turn: 'Finished, your turn', idle: 'Idle', ended: 'Not running' };
+function subsOf(s) { return (s.subs || []).filter(x => filter === 'all' || x.kind === 'helper' || (data.sessions.find(y => y.key === x.key) || {}).agent === filter); }
+function subNeeds(s) { return subsOf(s).filter(x => x.state === 'needs_you'); }
+/** A session sits in "Needs you" when it, or one of its sub agents, is waiting on you. */
+function groupOf(s) { return s.state !== 'needs_you' && s.state !== 'ended' && subNeeds(s).length ? 'needs_you' : s.state; }
+function topLevel(ss) { const keys = new Set(ss.map(s => s.key)); return ss.filter(s => !s.parentKey || !keys.has(s.parentKey)); }
+function subHtml(x) {
+  const status = x.state === 'needs_you' ? `Needs approval${x.needs && x.needs.detail ? ': ' + x.needs.detail : ''}`
+    : x.state === 'working' && x.doing ? `Working: ${x.doing}`
+    : (SUB_STATUS[x.state] || x.state) + (x.state === 'working' ? '' : ` ${ago(x.lastActivity)}`);
+  const kind = x.kind === 'helper' ? (x.background ? 'Background helper' : 'Helper') : 'Session';
+  const selKey = x.kind === 'helper' ? x.openKey : x.key;
+  return `<li class="sub s-${esc(x.state)} ${x.key === selected ? 'sel' : ''}" data-sel="${esc(selKey)}" title="${esc(x.title)}">
+    <span class="dot"></span>
+    <span class="st">${esc(x.title)}</span>
+    <span class="sb">
+      <button data-open="${esc(x.openKey)}" title="${x.kind === 'helper' ? 'Opens the session this helper runs in' : 'Opens this session'}">Open</button>
+      <button class="appr" ${x.approvalKey ? `data-open="${esc(x.approvalKey)}"` : 'disabled title="Nothing to approve right now"'}>Needs approval</button>
+    </span>
+    <span class="ss" style="grid-column:2"><span class="kind">${kind}</span>${esc(status)}</span>
+  </li>`;
+}
+function subsHtml(s) {
+  const subs = subsOf(s);
+  if (!subs.length) return '';
+  const live = subs.filter(x => !['done', 'stopped', 'ended'].includes(x.state));
+  const old = subs.filter(x => ['done', 'stopped', 'ended'].includes(x.state));
+  const all = openSubs.has(s.key);
+  const show = all ? live.concat(old) : live.concat(old.slice(0, Math.max(0, 3 - live.length)));
+  const rest = subs.length - show.length;
+  const toggle = rest ? `<button class="linkish" data-subs="${esc(s.key)}">Show ${rest} more finished</button>`
+    : all && old.length > 3 ? `<button class="linkish" data-subs="${esc(s.key)}">Show fewer</button>` : '';
+  return `<ul class="subs">${show.map(subHtml).join('')}${toggle ? `<li class="more-subs">${toggle}</li>` : ''}</ul>`;
+}
+function rowHtml(s) {
+  const subs = subsOf(s);
+  const waiting = subNeeds(s).length;
+  const count = subs.length ? `<span class="rm subcount">${plural(subs.length, 'sub agent', 'sub agents')}${waiting ? ` · <b>${waiting} need${waiting === 1 ? 's' : ''} approval</b>` : ''}</span>` : '';
+  return `<button class="row s-${s.state} ${s.key === selected ? 'sel' : ''}" data-sel="${esc(s.key)}">
+    <span class="dot"></span><span class="rt">${esc(s.title || s.project)}</span>
+    <span class="rs">${esc(shortStatus(s))}</span>
+    <span class="rm">${esc(s.agentLabel)} · ${esc(repo(s))}</span>
+    ${count}
+  </button>${subsHtml(s)}`;
+}
+function renderList() {
+  const all = visible();
+  const ss = topLevel(all);
+  const sig = [...openSubs].join() + JSON.stringify(all.map(s => [s.key, s.state, s.title, s.currentStep, s.needs && s.needs.label, s.parentKey, (s.subs || []).map(x => [x.key, x.state, x.doing, x.approvalKey]), Math.floor((Date.now() - (s.lastAgentAt || s.lastActivity)) / 60000)])) + selected + filter;
+  if (sig === listSig) return;
+  listSig = sig;
+  let html = '';
+  for (const [state, title] of GROUPS) {
+    const g = ss.filter(s => groupOf(s) === state);
+    if (!g.length && state !== 'needs_you') continue;
+    html += `<div class="group"><h2>${title} <span class="c">${g.length || ''}</span></h2>${g.length ? g.map(rowHtml).join('') : '<div class="empty-note">Nothing is waiting on you.</div>'}</div>`;
+  }
+  const ended = ss.filter(s => groupOf(s) === 'ended');
+  if (ended.length) {
+    const open = pref('earlierOpen', '0') === '1' || ended.some(s => s.key === selected);
+    html += `<details class="group earlier" ${open ? 'open' : ''}><summary><h2>Earlier, not running <span class="c">${ended.length}</span></h2></summary>${ended.map(rowHtml).join('')}</details>`;
+  }
+  document.getElementById('list').innerHTML = html;
+  const helperWaits = all.reduce((n, s) => n + (s.subs || []).filter(x => x.kind === 'helper' && x.state === 'needs_you').length, 0);
+  const n = { needs: all.filter(s => s.state === 'needs_you').length + helperWaits, work: all.filter(s => s.state === 'working').length, turn: all.filter(s => s.state === 'your_turn').length };
+  const parts = [];
+  if (n.needs) parts.push(`<b class="n">${n.needs} need${n.needs === 1 ? 's' : ''} you</b>`);
+  if (n.work) parts.push(`<b>${n.work}</b> working`);
+  if (n.turn) parts.push(`<b>${n.turn}</b> finished`);
+  document.getElementById('summary').innerHTML = parts.join(' · ') || 'All quiet. No agent needs you.';
+}
+
+// ---------- map: you in the middle, agents on ring 1, their sub agents on ring 2 ----------
+let mapSig = '';
+function mapNodes() {
+  const all = visible();
+  const keys = new Set(all.map(s => s.key));
+  const live = (x) => !['ended', 'done', 'stopped'].includes(x.state);
+  // Agents worth showing: running ones, plus ended ones that still have something live under them.
+  const agents = all.filter(s => (!s.parentKey || !keys.has(s.parentKey)) && (live(s) || subsOf(s).some(live)));
+  const rank = (s) => (s.state === 'needs_you' || subNeeds(s).length) ? 0 : s.state === 'working' ? 1 : s.state === 'your_turn' ? 2 : 3;
+  agents.sort((a, b) => rank(a) - rank(b) || b.lastActivity - a.lastActivity);
+  return agents.slice(0, 14).map(a => ({ a, subs: subsOf(a).filter(x => live(x) || x.state === 'needs_you') }));
+}
+function nodeCls(x, hasAsk) {
+  if (x.state === 'needs_you') return 'm-needs';
+  if (hasAsk) return 'm-path';
+  if (x.state === 'working') return 'm-working';
+  if (x.state === 'your_turn') return 'm-turn';
+  return 'm-quiet';
+}
+function nodeHtml(x, opts) {
+  const cls = nodeCls(x, opts.asks > 0);
+  const selKey = opts.selKey || x.key;
+  const name = x.title || x.project || 'Session';
+  const ask = x.needs ? (x.needs.detail || x.needs.label) : '';
+  const meta = opts.meta || '';
+  const btns = x.state === 'needs_you'
+    ? `<div class="nb"><button class="primary" data-open="${esc(opts.approvalKey || x.key)}">${x.needs && x.needs.kind === 'approval' ? 'Approve' : 'Go answer'}</button><button data-open="${esc(opts.openKey || x.key)}">Open</button></div>` : '';
+  const sub = x.state === 'needs_you' ? `<div class="nq">${esc(ask)}</div>` : x.state === 'working' && (x.doing || x.currentStep) ? `<div class="nmeta">${esc(x.doing || x.currentStep)}</div>` : meta ? `<div class="nmeta">${esc(meta)}</div>` : '';
+  return `<div class="mnode ${cls} ${selKey === selected ? 'msel' : ''}" role="button" tabindex="0" data-sel="${esc(selKey)}" title="${esc(name)}">
+    <div class="nt"><i></i><span class="nm">${esc(u_clip(name, 40))}</span>${opts.asks ? `<span class="badge">${opts.asks}</span>` : ''}</div>${sub}${btns}</div>`;
+}
+function u_clip(t, n) { t = String(t || ''); return t.length > n ? t.slice(0, n - 1) + '…' : t; }
+function renderMap() {
+  const el = document.getElementById('map');
+  const open = pref('mapOpen', '1') === '1';
+  const groups = mapNodes();
+  const sig = open + selected + JSON.stringify(groups.map(g => [g.a.key, g.a.state, g.a.title, g.a.currentStep, g.a.needs, g.subs.map(x => [x.key, x.state, x.doing, x.needs])]));
+  if (sig === mapSig) return;
+  mapSig = sig;
+  const asking = groups.reduce((n, g) => n + (g.a.state === 'needs_you' ? 1 : 0) + g.subs.filter(x => x.state === 'needs_you').length, 0);
+  const head = `<div class="map-h"><h3>Agents and sub agents</h3><span>${asking ? 'Follow the red lines to the glowing cards: they need you.' : 'Nothing needs you right now.'} Click a card to see it below.</span><button class="linkish" data-map>${open ? 'Hide map' : 'Show map'}</button></div>`;
+  if (!open) { el.innerHTML = `<div class="mapwrap">${head}<div style="height:14px"></div></div>`; return; }
+  const working = groups.filter(g => g.a.state === 'working').length + groups.reduce((k, g) => k + g.subs.filter(x => x.state === 'working').length, 0);
+  const hub = `<div class="top ${asking ? 'hot' : ''}"><div class="hub ${asking ? 'hot' : ''}"><span class="hl">You</span><span class="hn">${asking || '✓'}</span><span class="hs">${asking ? 'asking you' : working ? `${working} working` : 'all clear'}</span></div></div>`;
+  // Rail segments between the centre and a hot branch turn red, so the line leads from You to it.
+  const hotIdx = groups.map((g, i) => (g.a.state === 'needs_you' || subNeeds(g.a).length) ? i : -1).filter(i => i >= 0);
+  const mid = (groups.length - 1) / 2;
+  const railHot = (i) => hotIdx.some(h => (h <= i && i <= mid) || (mid <= i && i <= h));
+  const branches = groups.map((g, i) => {
+    const asks = subNeeds(g.a).length;
+    const hot = g.a.state === 'needs_you' || asks > 0;
+    const lastHot = g.subs.map(x => x.state === 'needs_you').lastIndexOf(true);
+    const shown = g.subs.slice(0, 6);
+    const kids = shown.map((x, j) => {
+      const kind = x.kind === 'helper' ? (x.background ? 'Background helper' : 'Helper') : 'Session';
+      const cls = x.state === 'needs_you' ? 'hot' : j < lastHot ? 'hot-pass' : '';
+      return `<li class="kid ${cls}">${nodeHtml(x, { selKey: x.kind === 'helper' ? x.openKey : x.key, openKey: x.openKey, approvalKey: x.approvalKey, asks: 0, meta: `${kind} · ${SUB_STATUS[x.state] || x.state}` })}</li>`;
+    }).join('');
+    const more = g.subs.length > shown.length ? `<li class="more-kids">and ${g.subs.length - shown.length} more</li>` : '';
+    return `<div class="branch ${hot ? 'hot' : ''} ${railHot(i) ? 'hot-rail' : ''}">${nodeHtml(g.a, { asks, meta: `${g.a.agentLabel} · ${repo(g.a)}` })}${kids || more ? `<ul class="kids">${kids}${more}</ul>` : ''}</div>`;
+  }).join('');
+  el.innerHTML = `<div class="mapwrap">${head}
+    <div class="tree">${hub}${groups.length ? `<div class="branches">${branches}</div>` : '<div class="map-empty">No agents running</div>'}</div>
+    <div class="map-legend"><span><i style="background:var(--needs)"></i>needs you (glows)</span><span><i style="border:1.5px solid var(--needs)"></i>something under it needs you</span><span><i style="border:1px solid var(--work)"></i>working</span><span><i style="border:1px solid var(--turn)"></i>finished, your turn</span><span><svg width="22" height="6"><path d="M0 3h22" stroke="var(--needs)" stroke-width="2"/></svg>the path to what needs you</span></div>
+  </div>`;
+}
+
+// ---------- needs-you strip (always on top, whichever session is open) ----------
+let needsSig = '';
+function renderNeeds() {
+  const ns = visible().filter(s => s.state === 'needs_you');
+  for (const p of visible()) for (const x of p.subs || []) {
+    if (x.kind === 'helper' && x.state === 'needs_you') ns.push({ key: p.key, agentLabel: `Helper agent in "${p.title}"`, project: p.project, title: x.title, needs: x.needs });
+  }
+  const sig = JSON.stringify(ns.map(s => [s.key, s.needs, s.title])) + selected;
+  if (sig === needsSig) return;
+  needsSig = sig;
+  const el = document.getElementById('needs');
+  if (!ns.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="needs-strip"><h3>${ns.length === 1 ? '1 session needs you' : ns.length + ' sessions need you'}</h3>${ns.map(s => `
+    <div class="nd ${s.key === selected ? 'sel' : ''}">
+      <div class="who">${esc(s.agentLabel)} · ${esc(repo(s))}</div>
+      <div class="what">${esc(s.title || s.project)}: ${esc(s.needs ? s.needs.label.toLowerCase() : 'needs you')}</div>
+      ${s.needs && s.needs.detail ? `<div class="why" title="${esc(s.needs.detail)}">${esc(s.needs.detail)}</div>` : ''}
+      <div class="btns"><button class="primary" data-open="${esc(s.key)}">Go answer</button>${s.key === selected ? '' : `<button data-sel="${esc(s.key)}">View</button>`}</div>
+    </div>`).join('')}</div>`;
+}
+
+// ---------- detail: right now ----------
+function nowHtml(s) {
+  let big = '', more = '', cta = '';
+  if (s.state === 'needs_you') {
+    big = s.needs ? s.needs.label : 'Needs you';
+    more = (s.needs && s.needs.detail) || '';
+    cta = `<button class="primary" data-open="${esc(s.key)}">Go answer</button>`;
+  } else if (s.state === 'working') {
+    big = s.currentStep || (s.actions && s.actions[0] ? s.actions[0].text : 'Working');
+    cta = `<button data-open="${esc(s.key)}">Open session</button>`;
+  } else if (s.state === 'your_turn') {
+    big = `Finished ${ago(s.lastAgentAt || s.lastActivity)}. It's waiting for your reply.`;
+    more = s.lastAgent || '';
+    cta = `<button class="primary" data-open="${esc(s.key)}">Reply</button>`;
+  } else {
+    big = s.state === 'idle' ? `Idle since ${ago(s.lastActivity)}` : `Not running. Last active ${ago(s.lastActivity)}.`;
+    more = s.lastAgent || '';
+    cta = `<button data-open="${esc(s.key)}">${s.state === 'ended' ? 'Resume in Terminal' : 'Open session'}</button>`;
+  }
+  let bar = '';
+  const plan = s.plan && s.plan.length ? s.plan : null;
+  if (plan && s.state !== 'ended') {
+    const done = plan.filter(p => p.status === 'completed').length;
+    bar = `<div class="bar"><i style="width:${Math.round(done / plan.length * 100)}%"></i></div><div class="barlbl">${done} of ${plan.length} plan steps done</div>`;
+  }
+  const id = 'now:' + s.key;
+  const long = more.length > 320;
+  return `<div class="now s-${s.state}">
+    <div class="lbl">${NOW_LABEL[s.state]}</div>
+    <div class="big">${esc(big)}</div>
+    ${more ? `<div class="more ${long && !fullText.has(id) ? 'clamp4' : ''}">${esc(more)}</div>${long ? `<button class="linkish" data-full="${esc(id)}">${fullText.has(id) ? 'Show less' : 'Read all'}</button>` : ''}` : ''}
+    ${bar}
+    <div class="cta">${cta}</div>
+  </div>`;
+}
+
+// ---------- detail: pull request ----------
+function since(t) {
+  if (!t) return '';
+  const m = Math.round((Date.now() - Date.parse(t)) / 60000);
+  return m < 1 ? 'just started' : m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${m % 60}m`;
+}
+function prHtml(s) {
+  const p = s.pr;
+  if (!p) return '';
+  const c = p.checks;
+  const pill = p.state === 'MERGED' ? 'Merged' : p.state === 'CLOSED' ? 'Closed' : p.draft ? 'Draft' : 'Open';
+  let ci = '', list = '';
+  if (p.state === 'OPEN') {
+    if (c.running.length || c.queued) {
+      ci = `<div class="ci running"><span class="d"></span>GitHub Actions running: ${c.running.length} of ${c.total} checks${c.queued ? `, ${c.queued} queued` : ''} · ${c.passed} passed${c.failed.length ? ` · ${c.failed.length} failed` : ''}</div>`;
+      list = c.running.slice(0, 4).map(r => `<li><b>${esc(r.name)}</b>${r.step ? `: ${r.stepOf ? 'step ' + esc(r.stepOf) + ', ' : ''}${esc(r.step)}` : ''}${r.startedAt ? ` · ${esc(since(r.startedAt))}` : ''}</li>`).join('');
+    } else if (c.failed.length) ci = `<div class="ci failed"><span class="d"></span>${plural(c.failed.length, 'check', 'checks')} failed · ${c.passed} passed</div>`;
+    else if (c.total) ci = `<div class="ci passed"><span class="d"></span>All ${c.passed} checks passed${c.skipped ? ` (${c.skipped} skipped)` : ''}</div>`;
+    else ci = `<div class="notes">No checks on this PR</div>`;
+    list += c.failed.slice(0, 4).map(f => `<li class="fail"><b>${esc(f.name)}</b> failed${f.url ? ` · <a href="${esc(f.url)}" target="_blank" rel="noopener">logs</a>` : ''}</li>`).join('');
+  }
+  const notes = [];
+  if (p.state === 'OPEN') {
+    if (p.mergeState === 'DIRTY') notes.push('Has merge conflicts');
+    else if (p.mergeState === 'BEHIND') notes.push('Behind the base branch');
+    if (p.review === 'APPROVED') notes.push('Approved');
+    else if (p.review === 'CHANGES_REQUESTED') notes.push('Changes requested');
+    else if (p.review === 'REVIEW_REQUIRED' && !p.draft) notes.push('Waiting for review');
+  }
+  return `<div class="pr">
+    <div class="pr-top"><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.repo ? p.repo.split('/')[1] : '')}#${p.number}</a><span class="chip">${pill}</span><span class="pt" title="${esc(p.title)}">${esc(p.title)}</span></div>
+    ${ci}${list ? `<ul>${list}</ul>` : ''}${notes.length ? `<div class="notes">${esc(notes.join(' · '))}</div>` : ''}
+  </div>`;
+}
+
+// ---------- detail: the flowchart ----------
+const ICON = {
+  explore: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/></svg>',
+  edit: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13l1-3.5L11 2.5l2.5 2.5L6.5 12z"/></svg>',
+  run: '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M5 3l8 5-8 5z"/></svg>',
+  plan: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h10M3 8h10M3 12h6"/></svg>',
+  ask: '?', error: '!',
+  ship: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 8.5l3 3 7-7"/></svg>',
+  browser: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="12" height="10" rx="2"/><path d="M2 6.5h12"/></svg>',
+  reply: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 4h11v7h-6l-3 2.5V11h-2z"/></svg>',
+  you: '<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="5.5" r="2.8"/><path d="M2.8 14c.6-3 2.7-4.5 5.2-4.5s4.6 1.5 5.2 4.5z"/></svg>',
+  other: '<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="2.5"/></svg>',
+};
+function iconFor(g) {
+  if (['pr', 'merge', 'push', 'commit', 'deploy'].includes(g)) return ICON.ship;
+  if (g === 'ci') return ICON.run;
+  return ICON[g] || ICON.other;
+}
+function item(id, cls, icon, inner) {
+  return `<li class="${cls} reveal ${revealed.has(id) ? 'in' : ''}" data-rid="${esc(id)}"><span class="ic">${icon}</span>${inner}</li>`;
+}
+
+/** The gist of a prompt: one line. Terminal commands lose their `cd …` part. */
+function promptGist(t) {
+  if (!t) return 'Session started';
+  const m = t.match(/^You ran in the terminal:\s*([\s\S]*)/);
+  if (m) {
+    const cmd = m[1].split(/\s*&&\s*/).filter(c => !/^cd\s/.test(c)).join(' && ') || m[1];
+    return 'You ran: ' + cmd;
+  }
+  return t;
+}
+/** First sentence of a reply. */
+function firstSentence(t) {
+  const x = String(t || '').split(/\[code\]/)[0].replace(/\s+/g, ' ').replace(/[:\s]+$/, '').trim();
+  const end = x.search(/[.!?](\s|$)/);
+  return end > 20 && end < 220 ? x.slice(0, end + 1) : x;
+}
+function flowHtml(s) {
+  const tl = timelines.get(s.key);
+  if (!tl || (!tl.data && !tl.error)) return '<div class="placeholder">Reading the session…</div>';
+  if (tl.error) return `<div class="placeholder">Couldn't read this session: ${esc(tl.error)}</div>`;
+  const all = tl.data.turns;
+  if (!all.length) return '<div class="placeholder">Nothing has happened in this session yet.</div>';
+  const turns = all.slice(-(shownTurns.get(s.key) || 3));
+  const hidden = tl.data.totalTurns - turns.length;
+  let html = hidden > 0 ? `<button class="earlier-btn" data-more="${esc(s.key)}">Show earlier turns (${hidden} more)</button>` : '';
+  html += '<ol class="flow">';
+  for (const t of turns) {
+    const base = `${s.key}#${t.n}`;
+    const youId = base + ':you';
+    const when = [`Turn ${t.n}`, dayClock(t.at || t.endAt), dur(t.at, t.endAt)].filter(Boolean).join(' · ');
+    const youOpen = fullText.has(youId);
+    html += item(base, 'chapter', ICON.you,
+      `<div class="when">${esc(when)}</div><div class="you ${youOpen ? 'full' : ''}" data-full="${esc(youId)}" title="${youOpen ? '' : 'Click to see all'}">${esc(youOpen ? t.prompt : promptGist(t.prompt))}</div>`);
+    t.points.forEach((p, i) => {
+      const id = `${base}:${i}`;
+      const hasMore = !!((p.list && p.list.length) || (p.detail && p.detail.length > 70));
+      const open = fullText.has(id);
+      const list = open && p.list && p.list.length ? `<ul>${p.list.map(x => `<li>${p.group === 'edit' ? `<code>${esc(x)}</code>` : esc(x)}</li>`).join('')}${p.more ? `<li>and ${p.more} more</li>` : ''}</ul>` : '';
+      const detail = p.detail ? (open ? `<p>${esc(p.detail)}</p>` : `<span class="dt">${esc(p.detail)}</span>`) : '';
+      html += item(id, `node step g-${p.group} ${hasMore ? 'more' : ''} ${open ? 'open' : ''}`, iconFor(p.group),
+        `<div class="line" ${hasMore ? `data-full="${esc(id)}"` : ''}><b>${esc(p.title)}</b>${open ? '' : detail}${hasMore ? `<span class="chev">${open ? '−' : '+'}</span>` : ''}</div>${open ? detail : ''}${list}`);
+    });
+    if (t.reply) {
+      const rid = base + ':reply';
+      const open = fullText.has(rid);
+      const gist = firstSentence(t.reply);
+      const more = gist.length < t.reply.replace(/\s+/g, ' ').trim().length;
+      html += item(rid, 'node g-reply', ICON.reply,
+        `<div class="card"><div class="reply ${open ? 'full' : ''}" ${more ? `data-full="${esc(rid)}" title="${open ? '' : 'Click to read all'}"` : ''}>${esc(open ? t.reply : gist)}${more && !open ? ' <span class="chev">more</span>' : ''}</div></div>`);
+    }
+  }
+  const liveText = s.state === 'needs_you' ? `Waiting for you: ${s.needs ? s.needs.label.toLowerCase() : 'needs input'}`
+    : s.state === 'working' ? `Working now${s.currentStep ? ': ' + s.currentStep : ''}`
+    : s.state === 'your_turn' ? 'Your turn' : s.state === 'idle' ? 'Idle' : 'Session ended';
+  html += item(`${s.key}:live:${s.state}`, `node live s-${s.state}`, s.state === 'working' ? ICON.run : s.state === 'needs_you' ? '!' : ICON.other,
+    `<div class="card"><div class="t"><b>${esc(liveText)}</b><span class="tm">${esc(ago(s.lastActivity))}</span></div></div>`);
+  return html + '</ol>';
+}
+
+function renderDetail() {
+  const ss = visible();
+  let s = ss.find(x => x.key === selected);
+  if (!s) {
+    s = ss.find(x => x.state === 'needs_you') || ss.find(x => x.state !== 'ended') || ss[0];
+    if (s) { selected = s.key; savePref('selected', selected); listSig = ''; renderList(); }
+  }
+  const el = document.getElementById('detail');
+  if (!s) { el.innerHTML = '<div class="panel"><div class="placeholder">No agent sessions in the last day.</div></div>'; detailSig = ''; return; }
+  const tl = timelines.get(s.key);
+  const sig = JSON.stringify(s) + (tl ? (tl.sig || tl.error || 'loading') : '') + (shownTurns.get(s.key) || 0) + [...fullText].join() + Math.floor(Date.now() / 30000);
+  if (sig === detailSig) return;
+  detailSig = sig;
+  const meta = [`<span class="chip">${esc(s.agentLabel)}</span>`, esc(repo(s)), s.branch ? `<code>${esc(s.branch)}</code>` : ''].filter(Boolean).join(' · ');
+  el.innerHTML = `<div class="panel">
+    <div class="dh">
+      <div class="dh-meta">${meta}</div>
+      <h2>${esc(s.title || s.project)}</h2>
+    </div>
+    ${nowHtml(s)}
+    ${prHtml(s)}
+    <div class="flow-h"><h3>What happened</h3><span>Oldest at the top. Scroll down to see what came next.</span></div>
+    ${flowHtml(s)}
+    ${s.resume ? `<div class="foot"><button data-copy="${esc(s.resume)}">Copy resume command</button></div>` : ''}
+  </div>`;
+  observeReveal();
+}
+
+// ---------- scroll reveal ----------
+const io = 'IntersectionObserver' in window ? new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    if (!e.isIntersecting) continue;
+    e.target.classList.add('in');
+    revealed.add(e.target.dataset.rid);
+    io.unobserve(e.target);
+  }
+}, { rootMargin: '0px 0px -6% 0px', threshold: 0.1 }) : null;
+function observeReveal() {
+  document.querySelectorAll('.flow > li.reveal:not(.in)').forEach(li => {
+    if (io) io.observe(li); else { li.classList.add('in'); revealed.add(li.dataset.rid); }
+  });
+}
+
+// ---------- data ----------
+async function loadTimeline(key, force) {
+  const cur = timelines.get(key);
+  if (cur && (cur.loading || (!force && Date.now() - (cur.at || 0) < 10000))) return;
+  timelines.set(key, { ...(cur || {}), loading: true });
+  try {
+    const r = await fetch('/api/timeline?key=' + encodeURIComponent(key));
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || r.statusText);
+    timelines.set(key, { data: j, at: Date.now(), sig: JSON.stringify(j), loading: false });
+  } catch (e) {
+    timelines.set(key, { ...(cur || {}), error: cur && cur.data ? null : String(e.message || e), at: Date.now(), loading: false });
+  }
+  if (key === selected) renderDetail();
+}
+
+const activitySeen = new Map();
+async function refresh(fresh) {
+  try {
+    const r = await fetch('/api/sessions' + (fresh ? '?fresh=1' : ''));
+    data = await r.json();
+    if (data.viewOnly && !document.body.classList.contains('view-only')) {
+      document.body.classList.add('view-only');
+      document.getElementById('summary').insertAdjacentHTML('afterend', '<span class="vo-note">View only</span>');
+    }
+    document.getElementById('errors').innerHTML = Object.keys(data.errors || {}).length ? `<div class="errors">Couldn't read: ${esc(Object.entries(data.errors).map(([k, v]) => `${k} (${v})`).join(', '))}</div>` : '';
+    renderMap();
+    renderList();
+    renderNeeds();
+    renderDetail();
+    const s = data.sessions.find(x => x.key === selected);
+    if (s) {
+      const changed = activitySeen.has(s.key) && activitySeen.get(s.key) !== s.lastActivity;
+      activitySeen.set(s.key, s.lastActivity);
+      loadTimeline(s.key, changed);
+    }
+  } catch {
+    document.getElementById('summary').textContent = 'The dashboard server is not running. Start it with: npm start';
+  }
+}
+
+// ---------- events ----------
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+const filterEl = document.getElementById('agentFilter');
+filterEl.value = filter;
+filterEl.addEventListener('change', (e) => { filter = e.target.value; savePref('filter', filter); listSig = detailSig = needsSig = mapSig = ''; renderMap(); renderList(); renderNeeds(); renderDetail(); });
+document.addEventListener('toggle', (e) => { if (e.target.classList && e.target.classList.contains('earlier')) savePref('earlierOpen', e.target.open ? '1' : '0'); }, true);
+document.addEventListener('click', async (e) => {
+  const el = e.target.closest('[data-map],[data-subs],[data-sel],[data-open],[data-copy],[data-more],[data-full]');
+  if (!el) return;
+  const ds = el.dataset;
+  if ('map' in ds) {
+    savePref('mapOpen', pref('mapOpen', '1') === '1' ? '0' : '1'); mapSig = ''; renderMap();
+  } else if (ds.subs) {
+    openSubs.has(ds.subs) ? openSubs.delete(ds.subs) : openSubs.add(ds.subs);
+    renderList();
+  } else if (ds.sel) {
+    selected = ds.sel; savePref('selected', selected);
+    const fromMap = !!el.closest('#map');
+    listSig = detailSig = needsSig = mapSig = '';
+    renderMap(); renderList(); renderNeeds(); renderDetail(); loadTimeline(selected);
+    if (fromMap || window.matchMedia('(max-width: 860px)').matches) document.querySelector('main').scrollIntoView({ behavior: 'smooth' });
+    else window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else if (ds.open) {
+    try {
+      const r = await fetch('/api/open', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: ds.open }) });
+      const j = await r.json(); toast(j.message || j.error || 'Done');
+    } catch { toast('The dashboard server is not reachable.'); }
+  } else if (ds.copy) {
+    try { await navigator.clipboard.writeText(ds.copy); toast('Copied the resume command'); } catch { toast(ds.copy); }
+  } else if (ds.more) {
+    shownTurns.set(ds.more, (shownTurns.get(ds.more) || 3) + 5); renderDetail();
+  } else if (ds.full) {
+    fullText.has(ds.full) ? fullText.delete(ds.full) : fullText.add(ds.full); renderDetail();
+  }
+});
+
+// ---------- light / dark toggle (light by default) ----------
+const SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>';
+const MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20.5 14.2A8.5 8.5 0 1 1 9.8 3.5a6.8 6.8 0 0 0 10.7 10.7z"/></svg>';
+function themeButton() {
+  const dark = document.documentElement.dataset.theme === 'dark';
+  const b = document.getElementById('themeBtn');
+  b.innerHTML = dark ? SUN : MOON;
+  b.title = b.ariaLabel = dark ? 'Switch to light mode' : 'Switch to dark mode';
+}
+document.getElementById('themeBtn').addEventListener('click', () => {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  savePref('theme', next);
+  themeButton();
+});
+themeButton();
+
+// ---------- alerts: browser notifications with buttons that jump to the session ----------
+let swReg = null;
+let alertsAfter = null; // last alert id seen; null until the first poll (so old alerts don't replay)
+const canNotify = 'Notification' in window && 'serviceWorker' in navigator;
+function alertsButton() {
+  const b = document.getElementById('alertsBtn');
+  if (!canNotify) { b.hidden = true; return; }
+  const p = Notification.permission;
+  b.hidden = p === 'granted';
+  b.textContent = p === 'denied' ? 'Alerts blocked in this browser' : 'Turn on alerts';
+  b.disabled = p === 'denied';
+}
+document.getElementById('alertsBtn').addEventListener('click', async () => { await Notification.requestPermission(); alertsButton(); pollAlerts(); });
+async function pollAlerts() {
+  const granted = canNotify && Notification.permission === 'granted' && swReg;
+  try {
+    const r = await fetch(`/api/alerts?after=${alertsAfter ?? 0}${granted ? '&notif=1' : ''}`);
+    const j = await r.json();
+    if (alertsAfter !== null && granted) {
+      for (const a of j.alerts) {
+        swReg.showNotification(a.title, {
+          body: `${a.subtitle}\n${a.body}`,
+          tag: a.key, renotify: true,
+          requireInteraction: a.cta !== 'Reply',
+          data: { key: a.key },
+          actions: [{ action: 'open', title: a.cta }, { action: 'ignore', title: 'Ignore' }],
+        });
+      }
+    }
+    alertsAfter = j.lastId;
+  } catch {}
+}
+if (canNotify) navigator.serviceWorker.register('/sw.js').then(async () => { swReg = await navigator.serviceWorker.ready; pollAlerts(); }).catch(() => {});
+alertsButton();
+setInterval(pollAlerts, 3000);
+
+refresh(true);
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>

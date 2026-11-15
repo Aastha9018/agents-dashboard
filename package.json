@@ -1,0 +1,15 @@
+{
+  "name": "agents-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local dashboard of every Claude Code, Codex and Prime Agent session on this Mac, and which ones need you.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --no-warnings server.js",
+    "install-hook": "node scripts/install-claude-hook.js",
+    "remove-hook": "node scripts/install-claude-hook.js --remove"
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}

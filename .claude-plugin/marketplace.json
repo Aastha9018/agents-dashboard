@@ -1,0 +1,14 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-marketplace.json",
+  "name": "agents-dashboard",
+  "description": "Agents dashboard for Claude Code.",
+  "owner": { "name": "Aastha9018" },
+  "plugins": [
+    {
+      "name": "agents-dashboard",
+      "description": "Local dashboard of every agent session on your Mac, and which ones need you.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}
