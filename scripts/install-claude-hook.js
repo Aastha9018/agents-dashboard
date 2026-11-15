@@ -29,7 +29,10 @@ else delete settings.hooks.Notification;
 
 fs.writeFileSync(file, JSON.stringify(settings, null, 2) + '\n');
 const marker = require('../lib/paths').HOOK_INSTALLED_FILE;
-if (remove) fs.rmSync(marker, { force: true });
+if (remove) {
+  // The plugin's own hook uses the same marker: keep it while the plugin is installed.
+  if (!fs.existsSync(require('../lib/paths').PLUGIN_ROOT_FILE)) fs.rmSync(marker, { force: true });
+}
 else {
   fs.mkdirSync(path.dirname(marker), { recursive: true });
   fs.writeFileSync(marker, new Date().toISOString() + '\n');
