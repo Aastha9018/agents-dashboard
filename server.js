@@ -50,6 +50,17 @@ function safeEqual(a, b) {
 }
 const RECENT_MS = Number(process.env.RECENT_HOURS || 24) * 3600_000;
 const NOTIFY = process.env.NOTIFY !== '0';
+
+// User settings, saved in ~/.agents-dashboard/settings.json. sound: play a sound with alerts (false = silent).
+const { SETTINGS_FILE } = require('./lib/paths');
+const settings = { sound: process.env.SOUND !== '0' };
+try {
+  Object.assign(settings, JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')));
+} catch {}
+function saveSettings() {
+  fs.mkdirSync(path.dirname(SETTINGS_FILE), { recursive: true });
+  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2) + '\n');
+}
 const POLL_MS = 4000;
 
 const SOURCES = [
@@ -135,7 +146,7 @@ function push(s, a, focused) {
   if (focused.has(s.key)) return; // you're already looking at it
   queue.push({ id: nextId++, at: Date.now(), ...a });
   if (queue.length > 50) queue.shift();
-  if (Date.now() - pageSeenAt > PAGE_FRESH_MS) notify(a.title, a.subtitle, a.body);
+  if (Date.now() - pageSeenAt > PAGE_FRESH_MS) notify(a.title, a.subtitle, a.body, settings.sound);
 }
 
 function maybeNotify(sessions) {
@@ -203,6 +214,7 @@ const server = http.createServer((req, res) => {
       sessions: snapshot.sessions.map(({ file, ...rest }) => rest), // don't ship local paths the page doesn't need
       notify: NOTIFY,
       viewOnly: remote,
+      settings,
       recentHours: RECENT_MS / 3600_000,
     });
   }
@@ -222,6 +234,32 @@ const server = http.createServer((req, res) => {
     } catch (e) {
       return send(res, 500, { error: String((e && e.message) || e) });
     }
+  }
+  if (req.method === 'POST' && url.pathname === '/api/settings') {
+    let body = '';
+    req.on('data', (c) => (body += c));
+    req.on('end', () => {
+      let j;
+      try {
+        j = JSON.parse(body);
+      } catch {
+        return send(res, 400, { error: 'bad json' });
+      }
+      if (typeof j.sound === 'boolean') settings.sound = j.sound;
+      try {
+        saveSettings();
+      } catch (e) {
+        return send(res, 500, { error: String(e.message || e) });
+      }
+      return send(res, 200, settings);
+    });
+    return;
+  }
+  if (req.method === 'GET' && url.pathname === '/api/image') {
+    const img = timeline.getShot(url.searchParams.get('key'), url.searchParams.get('id'));
+    if (!img) return send(res, 404, { error: 'image not found' });
+    res.writeHead(200, { 'Content-Type': img.mime, 'Cache-Control': 'private, max-age=3600', 'X-Content-Type-Options': 'nosniff' });
+    return res.end(Buffer.from(img.data, 'base64'));
   }
   if (req.method === 'POST' && url.pathname === '/api/open') {
     let body = '';

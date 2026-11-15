@@ -64,6 +64,10 @@ An agent moves to **Needs you** when any of its sub agents is waiting. Backgroun
 - Terminal sessions (Claude CLI, Prime, Codex): switches to the exact iTerm/Terminal tab, or brings VS Code/the host app to the front.
 - Ended sessions: opens a new Terminal window with the resume command.
 
+**Screenshots:** when a session checks UI work (browser or simulator screenshots), its turn shows a "Screenshots" row with thumbnails of the latest 8. Images you pasted into a message show under your prompt. Click one to see it full size (Esc to close). Claude Code sessions only.
+
+The speaker button in the top right switches alerts between **sound** (default) and **silent**. It applies to browser alerts and to the macOS banner fallback, and is saved in `~/.agents-dashboard/settings.json` (start with `SOUND=0` to default to silent).
+
 The sun/moon button in the top right switches between light (default) and dark. Your choice is remembered.
 
 ## Alerts
