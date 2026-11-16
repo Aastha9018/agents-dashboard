@@ -58,7 +58,7 @@ An agent moves to **Needs you** when any of its sub agents is waiting. Backgroun
 
 **Right:** the selected session:
 - **Right now:** what it needs from you, what it's working on, or its last message, with a button that jumps to it.
-- **Pull request:** if the session's branch has a PR (or it linked one in its own repo): Open/Draft/Merged, GitHub Actions progress (which job is running and which step it's on), failed checks with log links, conflicts and review state. Uses your `gh` login and refreshes every 20s while checks run.
+- **Pull requests:** every PR related to the session: its branch's PR, PRs it created, pushed to or ran `gh pr` on (by link or number), PRs the Claude app linked to it, and PRs it wrote about in the same repos. Each shows one status (Draft, Ready for review, CI running, CI failed, Merge conflicts, Changes requested, Ready to merge, Merged, Deploying to staging, Deployed to prod, Deploy failed) and its journey: Opened → Ready for review → CI → Mergeable → Merged → Deployed. Deployments come from GitHub's deployment records (e.g. jobs with an `environment:`), shown per environment with links to the logs. Uses your `gh` login; refreshes every 30s while CI or a deploy is running.
 - **What happened:** a flowchart of the session, oldest at the top. Each turn starts with what you asked, then the main points ("Looked through the code", "Made a plan with 5 steps", "Changed 3 files", "Committed", "Opened a pull request"), then its reply. The last item is where it stands now. Items fade in as you scroll.
 
 **Go answer / Open** brings the right window to the front:

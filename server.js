@@ -178,9 +178,34 @@ function maybeNotify(sessions) {
   firstScan = false;
 }
 
+/** PRs related to a session, most relevant first: its branch's PR, PRs it worked on, PRs the Claude app linked, PRs it wrote about (same repos only). */
+function prCandidates(s) {
+  const app = s.agent === 'claude' ? appSessions().get(s.id) : null;
+  const repoOf = (u) => ((u || '').match(/github\.com\/([^/]+\/[^/]+)\/pull/) || [])[1] || '';
+  const numOf = (u) => ((u || '').match(/\/pull\/(\d+)/) || [])[1];
+  const touchedUrls = (s.prTouched || []).filter((x) => !x.startsWith('ref:'));
+  const byNumber = (s.prTouched || []).filter((x) => x.startsWith('ref:')).map(github.resolve).filter(Boolean)
+    // a bare "#770" that matches a full link in another repo is that other PR, not a guess in this folder
+    .filter((u) => !touchedUrls.some((t) => numOf(t) === numOf(u) && repoOf(t) !== repoOf(u)));
+  const strong = [s.pr && s.pr.url, ...touchedUrls, ...byNumber, ...((app && app.prs) || [])].filter(Boolean);
+  const repos = new Set(strong.map(repoOf).concat(s.cwd ? [github.originRepo(s.cwd)] : []).filter(Boolean).map((r) => r.toLowerCase()));
+  const mentioned = (s.prMentioned || []).filter((u) => repos.has(repoOf(u).toLowerCase()));
+  const seen = new Set();
+  return strong.concat(mentioned).filter((u) => {
+    const k = u.toLowerCase();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
 function tick() {
   snapshot = scan();
-  for (const s of snapshot.sessions) if (s.state !== 'ended') s.pr = github.get(s); // cached; refreshes in the background
+  for (const s of snapshot.sessions) {
+    if (s.state === 'ended' && Date.now() - s.lastActivity > 6 * 3600_000) continue; // old ones: skip the GitHub calls
+    if (s.state !== 'ended') s.pr = github.get(s); // cached; refreshes in the background
+    s.prs = github.list(prCandidates(s));
+  }
   maybeNotify(snapshot.sessions);
 }
 

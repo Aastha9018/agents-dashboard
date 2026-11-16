@@ -145,6 +145,37 @@ main { min-width: 0; }
 .ci .d { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: currentColor; margin-right: 7px; vertical-align: 1px; }
 .ci.running .d { animation: pulse 1.2s ease-in-out infinite; }
 
+/* pull requests panel: every PR related to the session */
+.prs { margin-top: 16px; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+.prs-h { display: flex; align-items: baseline; gap: 10px; padding: 12px 18px; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+.prs-h b { font-size: 14px; }
+.prs-h span { font-size: 12.5px; color: var(--faint); }
+.pri { padding: 12px 18px 14px; border-top: 1px solid var(--border); display: grid; gap: 8px; }
+.pri:first-of-type { border-top: 0; }
+.pri-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pri-top a { font-weight: 700; font-size: 14px; white-space: nowrap; text-decoration: none; }
+.pri-top a:hover { text-decoration: underline; }
+.pri-top .pt { color: var(--muted); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+.badge-st { flex: none; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 99px; color: var(--bc); background: color-mix(in srgb, var(--bc) 13%, transparent); border: 1px solid color-mix(in srgb, var(--bc) 30%, transparent); white-space: nowrap; }
+.badge-st.pulse::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 6px; vertical-align: 1px; animation: pulse 1.2s ease-in-out infinite; }
+.b-grey { --bc: var(--idle); } .b-indigo { --bc: var(--turn); } .b-teal { --bc: var(--work); } .b-green { --bc: var(--g-ship); }
+.b-red { --bc: var(--g-error); } .b-amber { --bc: var(--g-plan); } .b-purple { --bc: #8a5cd6; }
+.track { display: flex; align-items: center; gap: 0; font-size: 11.5px; color: var(--faint); flex-wrap: wrap; row-gap: 6px; }
+.track .stp { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.track .stp i { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--surface); flex: none; }
+.track .stp.done { color: var(--muted); } .track .stp.done i { background: var(--g-ship); border-color: var(--g-ship); }
+.track .stp.now { color: var(--text); font-weight: 600; } .track .stp.now i { border-color: var(--work); background: var(--work); animation: pulse 1.4s ease-in-out infinite; }
+.track .stp.bad { color: var(--g-error); font-weight: 600; } .track .stp.bad i { border-color: var(--g-error); background: var(--g-error); }
+.track .ln { width: 18px; height: 1.5px; background: var(--line); margin: 0 6px; flex: none; }
+.track .ln.done { background: var(--g-ship); }
+.pri-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--muted); }
+.pri-meta .ci-run { color: var(--work); font-weight: 600; } .pri-meta .ci-bad { color: var(--g-error); font-weight: 600; } .pri-meta .ci-ok { color: var(--g-ship); }
+.dep { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--border); background: var(--surface-2); font-size: 12px; text-decoration: none; color: var(--muted); }
+.dep.ok { color: var(--g-ship); border-color: color-mix(in srgb, var(--g-ship) 35%, transparent); }
+.dep.run { color: var(--work); border-color: color-mix(in srgb, var(--work) 35%, transparent); }
+.dep.bad { color: var(--g-error); border-color: color-mix(in srgb, var(--g-error) 35%, transparent); }
+.pri ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 12.5px; }
+.pri li b { color: var(--text); font-weight: 600; }
 .flow-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 34px 0 6px; }
 .flow-h h3 { font-size: 17px; margin: 0; font-weight: 700; }
 .flow-h span { color: var(--faint); font-size: 13px; }
@@ -615,6 +646,88 @@ function prHtml(s) {
   </div>`;
 }
 
+// ---------- detail: every PR related to the session ----------
+const DEP_RUN = /pending|queued|in_progress/;
+/** One headline status for a PR: what stage it's at, or what's blocking it. */
+function prStage(p) {
+  const c = p.checks || { running: [], failed: [], queued: 0, total: 0 };
+  const deps = p.deployments || [];
+  if (p.state === 'MERGED') {
+    const bad = deps.find(d => /failure|error/.test(d.state));
+    if (bad) return { label: `Deploy to ${bad.env} failed`, cls: 'b-red' };
+    const run = deps.find(d => DEP_RUN.test(d.state));
+    if (run) return { label: `Deploying to ${run.env}`, cls: 'b-teal', pulse: true };
+    const ok = deps.filter(d => /success|inactive/.test(d.state));
+    if (ok.length) return { label: `Deployed to ${ok[ok.length - 1].env}`, cls: 'b-green' };
+    return { label: 'Merged', cls: 'b-purple' };
+  }
+  if (p.state === 'CLOSED') return { label: 'Closed', cls: 'b-grey' };
+  if (p.draft) return { label: 'Draft', cls: 'b-grey' };
+  if (c.failed.length) return { label: 'CI failed', cls: 'b-red' };
+  if (c.running.length || c.queued) return { label: 'CI running', cls: 'b-teal', pulse: true };
+  if (p.mergeState === 'DIRTY') return { label: 'Merge conflicts', cls: 'b-red' };
+  if (p.review === 'CHANGES_REQUESTED') return { label: 'Changes requested', cls: 'b-amber' };
+  if (p.mergeState === 'CLEAN' || p.mergeState === 'HAS_HOOKS' || p.mergeState === 'UNSTABLE') return { label: 'Ready to merge', cls: 'b-green' };
+  if (p.mergeState === 'BEHIND') return { label: 'Behind base branch', cls: 'b-amber' };
+  if (p.review === 'REVIEW_REQUIRED') return { label: 'Ready for review', cls: 'b-indigo' };
+  if (p.mergeState === 'BLOCKED') return { label: 'Blocked', cls: 'b-amber' };
+  return { label: 'Open', cls: 'b-indigo' };
+}
+/** The PR's journey: Draft → Review → CI → Mergeable → Merged → Deployed. */
+function prTrack(p) {
+  const c = p.checks || { running: [], failed: [], queued: 0, total: 0 };
+  const merged = p.state === 'MERGED';
+  const deps = p.deployments || [];
+  const st = (done, now, bad) => bad ? 'bad' : done ? 'done' : now ? 'now' : '';
+  const ciDone = merged || (c.total > 0 && !c.failed.length && !c.running.length && !c.queued);
+  const steps = [
+    ['Opened', 'done'],
+    [p.draft ? 'Draft' : 'Ready for review', st(!p.draft || merged, p.draft)],
+    ['CI', st(ciDone, !ciDone && (c.running.length || c.queued), !merged && c.failed.length)],
+    [p.review === 'APPROVED' ? 'Approved' : 'Mergeable', st(merged || ['CLEAN', 'HAS_HOOKS', 'UNSTABLE'].includes(p.mergeState), false, !merged && (p.mergeState === 'DIRTY' || p.review === 'CHANGES_REQUESTED'))],
+    ['Merged', st(merged, false)],
+    ['Deployed', st(merged && deps.length && deps.every(d => /success|inactive/.test(d.state)), merged && deps.some(d => DEP_RUN.test(d.state)), deps.some(d => /failure|error/.test(d.state)))],
+  ];
+  if (p.state === 'CLOSED') return '';
+  return `<div class="track">${steps.map(([l, k], i) => `${i ? `<span class="ln ${k === 'done' || k === 'now' ? 'done' : ''}"></span>` : ''}<span class="stp ${k}"><i></i>${esc(l)}</span>`).join('')}</div>`;
+}
+function prRow(p, primary) {
+  const stg = prStage(p);
+  const c = p.checks || { running: [], failed: [], queued: 0, total: 0, passed: 0, skipped: 0 };
+  const meta = [];
+  if (p.state === 'OPEN' && c.total) {
+    if (c.running.length || c.queued) meta.push(`<span class="ci-run">CI: ${c.running.length + c.queued} running · ${c.passed}/${c.total} passed</span>`);
+    else if (c.failed.length) meta.push(`<span class="ci-bad">CI: ${c.failed.length} failed</span> · ${c.passed}/${c.total} passed`);
+    else meta.push(`<span class="ci-ok">CI: all ${c.passed} passed</span>`);
+  }
+  for (const d of p.deployments || []) {
+    const k = /success|inactive/.test(d.state) ? 'ok' : DEP_RUN.test(d.state) ? 'run' : /failure|error/.test(d.state) ? 'bad' : '';
+    const sym = k === 'ok' ? '✓' : k === 'run' ? '…' : k === 'bad' ? '✕' : '•';
+    meta.push(`<a class="dep ${k}" ${d.url ? `href="${esc(d.url)}" target="_blank" rel="noopener"` : ''} title="${esc(d.env)}: ${esc(d.state)}">${esc(d.env)} ${sym}</a>`);
+  }
+  if (p.state === 'MERGED' && p.mergedAt) meta.push(`merged ${esc(ago(Date.parse(p.mergedAt)))}`);
+  // Running jobs and failed checks (with the live step for the session's own PR).
+  const live = primary && primary.url === p.url ? primary.checks : c;
+  const jobs = p.state === 'OPEN' ? live.running.slice(0, 3).map(r => `<li><b>${esc(r.name)}</b>${r.step ? `: ${r.stepOf ? 'step ' + esc(r.stepOf) + ', ' : ''}${esc(r.step)}` : ''}${r.startedAt ? ` · ${esc(since(r.startedAt))}` : ''}</li>`).join('')
+    + c.failed.slice(0, 3).map(f => `<li><b>${esc(f.name)}</b> failed${f.url ? ` · <a href="${esc(f.url)}" target="_blank" rel="noopener">logs</a>` : ''}</li>`).join('') : '';
+  return `<div class="pri">
+    <div class="pri-top"><a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.repo ? p.repo.split('/')[1] : '')}#${p.number}</a><span class="pt" title="${esc(p.title)}">${esc(p.title)}</span><span class="badge-st ${stg.cls} ${stg.pulse ? 'pulse' : ''}">${esc(stg.label)}</span></div>
+    ${prTrack(p)}
+    ${meta.length ? `<div class="pri-meta">${meta.join('')}</div>` : ''}
+    ${jobs ? `<ul>${jobs}</ul>` : ''}
+  </div>`;
+}
+function prsHtml(s) {
+  let list = (s.prs || []).slice();
+  if (s.pr && !list.some(p => p.url === s.pr.url)) list.unshift(s.pr);
+  if (!list.length) return '';
+  const rank = (p) => p.state === 'OPEN' ? 0 : p.state === 'MERGED' ? 1 : 2;
+  list.sort((a, b) => rank(a) - rank(b) || Date.parse(b.updatedAt || b.mergedAt || 0) - Date.parse(a.updatedAt || a.mergedAt || 0));
+  const open = list.filter(p => p.state === 'OPEN').length, merged = list.filter(p => p.state === 'MERGED').length;
+  const sub = [open && `${open} open`, merged && `${merged} merged`].filter(Boolean).join(' · ');
+  return `<div class="prs"><div class="prs-h"><b>${list.length === 1 ? 'Pull request' : `Pull requests (${list.length})`}</b><span>${esc(sub)}</span></div>${list.map(p => prRow(p, s.pr)).join('')}</div>`;
+}
+
 // ---------- detail: the flowchart ----------
 const ICON = {
   explore: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/></svg>',
@@ -731,7 +844,7 @@ function renderDetail() {
       <h2>${esc(s.title || s.project)}</h2>
     </div>
     ${nowHtml(s)}
-    ${prHtml(s)}
+    ${prsHtml(s)}
     <div class="flow-h"><h3>What happened</h3><span>Newest at the top. Scroll down for what came before.</span></div>
     ${flowHtml(s)}
     ${s.resume ? `<div class="foot"><button data-copy="${esc(s.resume)}">Copy resume command</button></div>` : ''}
