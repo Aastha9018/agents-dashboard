@@ -1,6 +1,6 @@
 {
   "name": "agents-dashboard",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Local dashboard of every Claude Code, Codex and Prime Agent session on this Mac, and which ones need you.",
   "main": "server.js",
   "scripts": {

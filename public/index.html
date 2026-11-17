@@ -107,6 +107,9 @@ aside { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow: a
 .subs .more-subs { padding-left: 4px; }
 .subs .more-subs .linkish { margin-top: 0; font-size: 12.5px; }
 .row .subcount { font-size: 12px; color: var(--muted); }
+.row .prchip { grid-column: 2; justify-self: start; margin-top: 4px; font-size: 11px; padding: 1px 8px; cursor: pointer; }
+.row .prchip:hover { filter: brightness(1.1); text-decoration: underline; }
+.prs.flash { outline: 2px solid var(--work); outline-offset: 4px; border-radius: 10px; transition: outline-color .4s; }
 .row .subcount b { color: var(--needs); font-weight: 600; }
 .empty-note { color: var(--faint); font-size: 13.5px; padding: 0 4px; }
 details.earlier > summary { cursor: pointer; list-style: none; }
@@ -371,7 +374,7 @@ const shownTurns = new Map();  // key -> how many recent turns to show
 const revealed = new Set();    // flow item ids already animated in (so refreshes don't replay)
 const fullText = new Set();    // ids of expanded replies/prompts
 const openSubs = new Set();    // parents whose finished sub agents are all shown
-let listSig = '', detailSig = '';
+let listSig = '', detailSig = '', jumpToPrs = 0;
 
 function pref(k, d) { try { return localStorage.getItem('ad.' + k) ?? d; } catch { return d; } }
 function savePref(k, v) { try { localStorage.setItem('ad.' + k, v); } catch {} }
@@ -450,18 +453,26 @@ function subsHtml(s) {
 function rowHtml(s) {
   const subs = subsOf(s);
   const waiting = subNeeds(s).length;
+  const prs = allPrs(s);
+  const prChip = prs.length ? (() => {
+    const order = ['b-red', 'b-amber', 'b-teal', 'b-green', 'b-indigo', 'b-purple', 'b-grey'];
+    const stages = prs.map(prStage).sort((a, b) => order.indexOf(a.cls) - order.indexOf(b.cls));
+    const top = stages[0];
+    const tip = prs.map((p, i) => `#${p.number}: ${prStage(p).label}`).join('\n');
+    return `<span class="prchip badge-st ${top.cls}" data-prs="${esc(s.key)}" title="${esc(tip)}">${plural(prs.length, 'PR', 'PRs')} · ${esc(top.label)}</span>`;
+  })() : '';
   const count = subs.length ? `<span class="rm subcount">${plural(subs.length, 'sub agent', 'sub agents')}${waiting ? ` · <b>${waiting} need${waiting === 1 ? 's' : ''} approval</b>` : ''}</span>` : '';
   return `<button class="row s-${s.state} ${s.key === selected ? 'sel' : ''}" data-sel="${esc(s.key)}">
     <span class="dot"></span><span class="rt">${esc(s.title || s.project)}</span>
     <span class="rs">${esc(shortStatus(s))}</span>
     <span class="rm">${esc(s.agentLabel)} · ${esc(repo(s))}</span>
-    ${count}
+    ${count}${prChip}
   </button>${subsHtml(s)}`;
 }
 function renderList() {
   const all = visible();
   const ss = topLevel(all);
-  const sig = [...openSubs].join() + JSON.stringify(all.map(s => [s.key, s.state, s.title, s.currentStep, s.needs && s.needs.label, s.parentKey, (s.subs || []).map(x => [x.key, x.state, x.doing, x.approvalKey]), Math.floor((Date.now() - (s.lastAgentAt || s.lastActivity)) / 60000)])) + selected + filter;
+  const sig = [...openSubs].join() + JSON.stringify(all.map(s => [s.key, s.state, s.title, s.currentStep, s.needs && s.needs.label, s.parentKey, (s.subs || []).map(x => [x.key, x.state, x.doing, x.approvalKey]), allPrs(s).map(p => p.url + prStage(p).label).join(), Math.floor((Date.now() - (s.lastAgentAt || s.lastActivity)) / 60000)])) + selected + filter;
   if (sig === listSig) return;
   listSig = sig;
   let html = '';
@@ -717,9 +728,13 @@ function prRow(p, primary) {
     ${jobs ? `<ul>${jobs}</ul>` : ''}
   </div>`;
 }
-function prsHtml(s) {
-  let list = (s.prs || []).slice();
+function allPrs(s) {
+  const list = (s.prs || []).slice();
   if (s.pr && !list.some(p => p.url === s.pr.url)) list.unshift(s.pr);
+  return list;
+}
+function prsHtml(s) {
+  const list = allPrs(s);
   if (!list.length) return '';
   const rank = (p) => p.state === 'OPEN' ? 0 : p.state === 'MERGED' ? 1 : 2;
   list.sort((a, b) => rank(a) - rank(b) || Date.parse(b.updatedAt || b.mergedAt || 0) - Date.parse(a.updatedAt || a.mergedAt || 0));
@@ -850,6 +865,16 @@ function renderDetail() {
     ${s.resume ? `<div class="foot"><button data-copy="${esc(s.resume)}">Copy resume command</button></div>` : ''}
   </div>`;
   observeReveal();
+  showPrs();
+}
+/** After a PR chip click, keep the PR panel in view and outlined, even if the detail redraws once the history loads. */
+function showPrs() {
+  if (!jumpToPrs || Date.now() - jumpToPrs > 3000) return;
+  const box = document.querySelector('.prs');
+  if (!box) return;
+  box.classList.add('flash');
+  box.scrollIntoView({ block: 'start' });
+  setTimeout(() => { jumpToPrs = 0; document.querySelectorAll('.prs.flash').forEach(b => b.classList.remove('flash')); }, 1600);
 }
 
 // ---------- scroll reveal ----------
@@ -925,9 +950,16 @@ document.addEventListener('toggle', (e) => { if (e.target.classList && e.target.
 document.addEventListener('click', async (e) => {
   const lb = e.target.closest('.lightbox');
   if (lb) { lb.remove(); return; }
-  const el = e.target.closest('[data-shot],[data-map],[data-subs],[data-sel],[data-open],[data-copy],[data-more],[data-full]');
+  const el = e.target.closest('[data-prs],[data-shot],[data-map],[data-subs],[data-sel],[data-open],[data-copy],[data-more],[data-full]');
   if (!el) return;
   const ds = el.dataset;
+  if (ds.prs) {
+    selected = ds.prs; savePref('selected', selected);
+    listSig = detailSig = needsSig = mapSig = '';
+    renderMap(); renderList(); renderNeeds(); renderDetail(); loadTimeline(selected);
+    jumpToPrs = Date.now(); showPrs();
+    return;
+  }
   if (ds.shot) {
     const box = document.createElement('div');
     box.className = 'lightbox';
