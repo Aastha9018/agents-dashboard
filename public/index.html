@@ -365,7 +365,8 @@ main { min-width: 0; }
 
 <script>
 // ---------- state ----------
-const DEMO = new URLSearchParams(location.search).get('demo') === '1'; // sample sessions mixed in, for demos
+const DEMO_MODE = new URLSearchParams(location.search).get('demo'); // '1' mixes sample sessions in, 'only' shows just them
+const DEMO = DEMO_MODE === '1' || DEMO_MODE === 'only';
 let data = { sessions: [] };
 let filter = pref('filter', 'all');
 let selected = pref('selected', '');
@@ -911,10 +912,10 @@ async function loadTimeline(key, force) {
 const activitySeen = new Map();
 async function refresh(fresh) {
   try {
-    const qs = [fresh ? 'fresh=1' : '', DEMO ? 'demo=1' : ''].filter(Boolean).join('&');
+    const qs = [fresh ? 'fresh=1' : '', DEMO ? 'demo=' + DEMO_MODE : ''].filter(Boolean).join('&');
     const r = await fetch('/api/sessions' + (qs ? '?' + qs : ''));
     data = await r.json();
-    if (DEMO && !document.getElementById('demoNote')) document.getElementById('summary').insertAdjacentHTML('afterend', '<span class="vo-note" id="demoNote">Demo: sample sessions mixed in</span>');
+    if (DEMO && !document.getElementById('demoNote')) document.getElementById('summary').insertAdjacentHTML('afterend', `<span class="vo-note" id="demoNote">${DEMO_MODE === 'only' ? 'Demo: sample sessions only' : 'Demo: sample sessions mixed in'}</span>`);
     if (data.viewOnly && !document.body.classList.contains('view-only')) {
       document.body.classList.add('view-only');
       document.getElementById('summary').insertAdjacentHTML('afterend', '<span class="vo-note">View only</span>');

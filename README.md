@@ -2,7 +2,7 @@
 
 One local page showing every AI agent session on this Mac and which ones are waiting on you.
 
-![Agents dashboard demo: agents and sub agents, what needs you glowing, live CI, switching agents, dark mode, jumping to a session](docs/demo.gif)
+![Agents dashboard demo: agents and sub agents, what needs you glowing, approvals, PR chips, the pull requests panel, dark mode](docs/demo.gif)
 
 **Needs:** macOS, Node 22.5 or newer, and (for the PR/CI section) the `gh` CLI signed in. No npm dependencies.
 
@@ -70,7 +70,7 @@ An agent moves to **Needs you** when any of its sub agents is waiting. Backgroun
 
 The speaker button in the top right switches alerts between **sound** (default) and **silent**. It applies to browser alerts and to the macOS banner fallback, and is saved in `~/.agents-dashboard/settings.json` (start with `SOUND=0` to default to silent).
 
-**Demo mode:** open http://localhost:4777/?demo=1 to mix a few sample sessions (Codex, Prime Agent, sub agents, a running PR) in with your real ones. Handy for screen recordings. Sample sessions are labelled and opening one does nothing.
+**Demo mode:** open http://localhost:4777/?demo=only to see only sample sessions (Codex, Prime Agent, sub agents, PRs in every state). It's safe for screen recordings because none of your real sessions show. Use `?demo=1` to mix the samples in with your real ones. Sample sessions are labelled and opening one does nothing.
 
 The sun/moon button in the top right switches between light (default) and dark. Your choice is remembered.
 

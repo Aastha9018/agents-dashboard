@@ -237,7 +237,8 @@ const server = http.createServer((req, res) => {
     if (url.searchParams.get('fresh') === '1') tick();
     return send(res, 200, {
       ...snapshot,
-      sessions: (url.searchParams.get('demo') === '1' ? demo.sessions(Date.now()) : []).concat(snapshot.sessions.map(({ file, ...rest }) => rest)), // don't ship local paths the page doesn't need
+      // ?demo=1 mixes sample sessions in; ?demo=only shows just the samples (safe for recordings)
+      sessions: (['1', 'only'].includes(url.searchParams.get('demo')) ? demo.sessions(Date.now()) : []).concat(url.searchParams.get('demo') === 'only' ? [] : snapshot.sessions.map(({ file, ...rest }) => rest)), // don't ship local paths the page doesn't need
       notify: NOTIFY,
       viewOnly: remote,
       settings,
